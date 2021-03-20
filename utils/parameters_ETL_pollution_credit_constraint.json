@@ -1,0 +1,55 @@
+{
+  "GLOBAL": {
+    "DESCRIPTION": "Study how a bank’s involvement in a firm's financing may be in line with environmental policies pursued by the Chinese central government. The Chinese government imposes critical pollution emission objectives during the 11th Five-Year-Plan (2006-2010). The objective of pollution emission was a success and we study one potential mechanism to explain this achievement. One candidate we want to analyse is the role of banks to relocate capital between industry, avoiding financing none environment-friendly project",
+    "GITHUB": {
+      "owner": "thomaspernet",
+      "repo_name": "pollution_credit_constraint"
+    },
+    "DATABASE": "",
+    "QUERIES_OUTPUT": "SQL_OUTPUT_ATHENA"
+  },
+  "TABLES": {
+    "CREATION": {
+      "ALL_SCHEMA": []
+    },
+    "PREPARATION": {
+      "STEPS": []
+    },
+    "TRANSFORMATION": {
+      "STEPS": []
+    }
+  },
+  "ANALYSIS": {
+    "COUNT_MISSING": {
+      "top": "SELECT COUNT(*) as nb_obs, ",
+      "middle": "COUNT(*) - COUNT({0}) AS {0}",
+      "bottom": " FROM {}.{}"
+    },
+    "CATEGORICAL": {
+      "PAIR": "SELECT {2}, COUNT(*) AS nb_obs FROM {0}.{1} GROUP BY {2} ORDER BY nb_obs DESC ",
+      "MULTI_PAIR": "SELECT {2}, {3}, COUNT(*) AS nb_obs FROM {0}.{1} GROUP BY {2}, {3} ORDER BY nb_obs DESC "
+    },
+    "CONTINUOUS": {
+      "DISTRIBUTION": {
+        "top_1": "SELECT * FROM (WITH table_wrapper AS (",
+        "top_2": ") SELECT table_wrapper.pct,",
+        "top_3": " FROM table_wrapper ",
+        "middle_1": "  LEFT JOIN ( ",
+        "middle_2": " ) as table_2_{0} ON table_wrapper.pct = table_2_{0}.pct ",
+        "bottom": "WITH table_{3} AS ( SELECT MAP( ARRAY[0.25, 0.50, 0.75, 0.95, 0.99], approx_percentile( {2}, ARRAY[0.25, 0.50, 0.75, 0.95, 0.99] ) ) as nest FROM {0}.{1} ) SELECT pct, value AS {2} FROM table_{3} CROSS JOIN UNNEST(nest) AS t(pct, value)"
+      },
+      "ONE_PAIR_DISTRIBUTION": {
+        "top_1": "SELECT * FROM (WITH table_wrapper AS (",
+        "top_2": ") SELECT table_wrapper.pct, table_wrapper.{}, ",
+        "top_3": " FROM table_wrapper ",
+        "middle_1": "  LEFT JOIN ( ",
+        "middle_2": " ) as table_2_{0} ON table_wrapper.{1} = table_2_{0}.{1} AND table_wrapper.pct = table_2_{0}.pct ",
+        "bottom": "WITH table_{3} AS ( SELECT {4}, MAP(ARRAY[0.25, 0.50, 0.75, 0.95, 0.99], approx_percentile( {2}, ARRAY[0.25, 0.50, 0.75, 0.95, 0.99] ) ) as nest FROM {0}.{1} GROUP BY {4}) SELECT {4}, pct, value AS {2} FROM table_{3} CROSS JOIN UNNEST(nest) AS t(pct, value)"
+      },
+      "TWO_PAIRS_DISTRIBUTION": "WITH dataset AS ( SELECT {2}, {3}, MAP( ARRAY[0.25, 0.50, 0.75, 0.95, 0.99], approx_percentile( {4}, ARRAY[0.25, 0.50, 0.75, 0.95, 0.99] ) ) as nest FROM {0}.{1} GROUP BY {2}, {3} ) SELECT {2}, {3}, pct, value AS {4} FROM dataset CROSS JOIN UNNEST(nest) AS t(pct, value)"
+    },
+    "COUNT_DUPLICATES": {
+      "query": "SELECT CNT, COUNT(*) AS CNT_DUPLICATE FROM ( SELECT {2}, COUNT(*) as CNT FROM {0}.{1} GROUP BY {2} ) GROUP BY CNT ORDER BY CNT_DUPLICATE"
+    }
+  }
+}
