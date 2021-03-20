@@ -1479,9 +1479,9 @@ client_lambda = boto3.client(
 ```
 
 ```python
-primary_key = ''
-secondary_key = ''
-y_var = ''
+primary_key = 'year'
+secondary_key = 'period'
+y_var = 'tso2'
 ```
 
 ```python
