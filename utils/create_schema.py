@@ -12,7 +12,7 @@ from diagrams.aws.storage import S3
 #    data = json.load(json_file)
 
 #create_schema(path_json = path_json)
-#path_save_image = os.path.join("IMAGES")
+#path_save_image = os.getcwd()
 
 def generate_graph_etl(data, list_final, path_save_image):
     """
@@ -27,6 +27,7 @@ def generate_graph_etl(data, list_final, path_save_image):
         list_origin = []
         list_preparation = []
         list_tranformation = []
+        list_input_transform = []
 
         index_name = "temp_final_{0}".format(ind)
         dic_index = {'table':list_table['final_table'], 'index':index_name, 'index_name':index_name}
@@ -61,7 +62,9 @@ with Diagram("{0}", show=False, filename="{1}", outformat="jpg"):\n
         template_final = """
      with Cluster("FINAL"):\n
 """
-
+        add_origin = False
+        add_preparation = False
+        add_transformation= False
         for i, val in enumerate(sorted(list_table['pipeline'], key = lambda i: i['origin'], reverse = False)):
             if len([t['index_name'] for t in list_index if t['table'] == val['output']]) ==0:
                 index_name = "temp_{0}".format(i +1)
@@ -102,13 +105,36 @@ with Diagram("{0}", show=False, filename="{1}", outformat="jpg"):\n
                 ### connection
                 connection = sort_origin(data, val['input'], reverse =False)
                 template_schema_transform = ""
-                for tab in connection:
+                size_connection = len(connection)
+                for ind, tab in enumerate(connection):
                     index = [t['index_name'] for t in list_index if t['table'] == tab['table']]
-                    template = "{0} >>".format(index[0])
-                    template_schema_transform += template
-                template_schema_transform += "{} >> {}\n".format(index_name[0], index_final[0])
-                template_schema += "{} {}".format(intend, template_schema_transform)
+                    if len(index) > 0:
+                        template = "{0} >>".format(index[0])
+                        template_schema_transform += template
+                        template_schema_transform += "{} >> {}\n".format(index_name[0], index_final[0])
+                        add_intend = True
+                    else:
+                        ## Add creation table to transform without PREPARATION
+                        var = '{0} input_{1} = S3("{2}")\n'.format(intend , tab['table'], tab['table'])
+                        if var not in list_origin:
+                            list_origin.append(var)
+                        input_temp = "input_{0}".format(tab['table'])
+                        #template_schema_transform += template
+                        if input_temp + index_name[0] not in list_input_transform:
+                            if ind == size_connection-1:
+                                template_schema_transform += "{} {} >> {} >> {}\n".format(intend, input_temp, index_name[0], index_final[0])
+                            else:
+                                ### the last input will link the TRANSFORMATION to final table
+                                ### it avoids having many lines
+                                template_schema_transform += "{} {} >> {}\n".format(intend, input_temp, index_name[0])
 
+                            list_input_transform.append(input_temp +  index_name[0])
+                        add_intend = False
+
+                if add_intend:
+                    template_schema += "{} {}".format(intend, template_schema_transform)
+                else:
+                    template_schema += "{}".format(template_schema_transform)
         table  = "'{}'".format(list_table['final_table'])
         var = '{0} {1} = Redshift({2})\n'.format(intend*2, index_final[0], table)
         template_final += var
@@ -245,24 +271,29 @@ def organise_table_md(data, dic_final, output):
                 desc
                 ))
                 ### Find input
+
                 list_input_1 = [val['input'] for i, val in enumerate(dic_final['pipeline']) if
-                val['output'] == list_input[nb]['table']][0]
-                list_input_1 = sort_origin(data = data,list_to_check= list_input_1)
-                nb_input_1 = len(list_input_1)
+                val['output'] == list_input[nb]['table']]
                 nb_1 = 0
                 nb += 1
-                while nb_1 < nb_input_1:
+                if len(list_input_1) > 0:
+                    list_input_1 = list_input_1[0]
 
-                    if list_input_1[nb_1]['table'] !=  None:
-                        url, desc =find_github_url(data = data,table_name = list_input_1[nb_1]['table'])
-                        md.append("{0}* {1}\n".format(indent_0 * 5, list_input_1[nb_1]['origin']))
-                        md.append("{0}* [{1}]({2}): {3}\n".format(
-                        indent_0 * 6,
-                        list_input_1[nb_1]['table'],
-                        url,
-                        desc
-                        ))
-                    nb_1 +=1
+                    list_input_1 = sort_origin(data = data,list_to_check= list_input_1)
+                    nb_input_1 = len(list_input_1)
+
+                    while nb_1 < nb_input_1:
+
+                        if list_input_1[nb_1]['table'] !=  None:
+                            url, desc =find_github_url(data = data,table_name = list_input_1[nb_1]['table'])
+                            md.append("{0}* {1}\n".format(indent_0 * 5, list_input_1[nb_1]['origin']))
+                            md.append("{0}* [{1}]({2}): {3}\n".format(
+                            indent_0 * 6,
+                            list_input_1[nb_1]['table'],
+                            url,
+                            desc
+                            ))
+                        nb_1 +=1
 
         if i['origin'] == 'CREATION':
             url, desc = find_github_url(data = data,table_name = i['output'])
@@ -276,7 +307,6 @@ def organise_table_md(data, dic_final, output):
     md.extend(md_creation)
     return md
 
-
 def create_schema(path_json, path_save_image):
     with open(path_json) as json_file:
         data = json.load(json_file)
@@ -285,6 +315,7 @@ def create_schema(path_json, path_save_image):
     list_README = []
     for i, val in enumerate(data['TABLES']['TRANSFORMATION']['STEPS']):
         if val['metadata']['if_final'] == 'True':
+
             output = val['metadata']['TableName']
             list_input = val['metadata']['input']
             list_input = list(dict.fromkeys(list_input))
@@ -295,6 +326,7 @@ def create_schema(path_json, path_save_image):
             dic_final = {'final_table': output}
             dic_final['pipeline'] = []
             for t in list_input:
+
                 ## check if table already yin pipeline
                 exist = [tab for tab in dic_final['pipeline'] if tab['output'] == t['table']]
                 if len(exist) ==0:
