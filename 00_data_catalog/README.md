@@ -18,29 +18,12 @@
 - Partitition: []
 - Script: https://github.com/thomaspernet/pollution_credit_constraint/01_data_preprocessing/00_download_data/TARGET_SO2/china_cities_target_so2.py
 
-|    | Name                             | Type   | Comment   |
-|---:|:---------------------------------|:-------|:----------|
-|  0 | citycn                           | string |           |
-|  1 | distance                         | float  |           |
-|  2 | ttoutput_i                       | float  |           |
-|  3 | ttoutput_j                       | float  |           |
-|  4 | tso2_mandate_c_j                 | float  |           |
-|  5 | SO2_perc_reduction_c_j           | float  |           |
-|  6 | avg_ij_o_city_mandate            | float  |           |
-|  7 | w_avg_ij_o_city_mandate          | float  |           |
-|  8 | avg_ij_city_mandate              | float  |           |
-|  9 | w_avg_ij_city_mandate            | float  |           |
-| 10 | avg_ij_o_perc_city_mandate       | float  |           |
-| 11 | w_avg_ij_o_perc_city_mandate     | float  |           |
-| 12 | avg_ij_perc_city_mandate         | float  |           |
-| 13 | w_avg_ij_perc_city_mandate       | float  |           |
-| 14 | d_avg_ij_o_city_mandate_previous | float  |           |
-| 15 | d_w_avg_ij_o_city_mandate        | float  |           |
-| 16 | tso2_mandate_c                   | float  |           |
-| 17 | SO2_perc_reduction_c             | float  |           |
-| 18 | output_diff                      | float  |           |
-| 19 | target_diff                      | string |           |
-| 20 | d_avg_ij_o_city_mandate          | string |           |
+|    | Name                    | Type   | Comment   |
+|---:|:------------------------|:-------|:----------|
+|  0 | citycn                  | float  |           |
+|  1 | geocode4_corr           | float  |           |
+|  2 | d_avg_ij_o_city_mandate | float  |           |
+|  3 | avg_ij_o_city_mandate   | float  |           |
 
     
 

@@ -523,10 +523,7 @@ FROM
   LEFT JOIN chinese_lookup.province_credit_constraint ON aggregate_pol.province_en = province_credit_constraint.Province
   LEFT JOIN (
     SELECT geocode4_corr, avg_ij_o_city_mandate, d_avg_ij_o_city_mandate 
-FROM "policy"."china_spatial_relocation"
-INNER JOIN chinese_lookup.china_city_code_normalised ON china_spatial_relocation.citycn = china_city_code_normalised.citycn 
- WHERE 
-      extra_code = geocode4_corr
+    FROM "policy"."china_spatial_relocation" 
     ) as relocation
     ON aggregate_pol.geocode4_corr = relocation.geocode4_corr
 WHERE 
@@ -536,7 +533,6 @@ WHERE
   and employment > 0
   and current_ratio > 0
   and cashflow_to_tangible > 0
-  AND so2_intensity  > 0
   AND aggregate_pol.ind2 != '43'
   -- AND tfp_cit > 0
   LIMIT 10
@@ -949,9 +945,6 @@ FROM
   LEFT JOIN (
     SELECT geocode4_corr, avg_ij_o_city_mandate, d_avg_ij_o_city_mandate 
 FROM "policy"."china_spatial_relocation"
-INNER JOIN chinese_lookup.china_city_code_normalised ON china_spatial_relocation.citycn = china_city_code_normalised.citycn 
- WHERE 
-      extra_code = geocode4_corr
     ) as relocation
     ON aggregate_pol.geocode4_corr = relocation.geocode4_corr
 WHERE 
