@@ -252,6 +252,8 @@ SELECT
   tso2_mandate_c,
   above_threshold_mandate,
   above_average_mandate,
+  avg_ij_o_city_mandate,
+  d_avg_ij_o_city_mandate,
   in_10_000_tonnes, 
   tfp_cit,
   credit_constraint,
@@ -342,6 +344,7 @@ FROM
   lag_cashflow_tot_asset,
   return_to_sale,
   lag_return_to_sale
+    
   FROM firms_survey.asif_industry_financial_ratio_industry 
   WHERE year = '2002'
   ) AS asif_industry_financial_ratio_industry
@@ -518,7 +521,14 @@ FROM
   LEFT JOIN firms_survey.asif_city_characteristics_ownership
     ON aggregate_pol.geocode4_corr = asif_city_characteristics_ownership.geocode4_corr
   LEFT JOIN chinese_lookup.province_credit_constraint ON aggregate_pol.province_en = province_credit_constraint.Province
-
+  LEFT JOIN (
+    SELECT geocode4_corr, avg_ij_o_city_mandate, d_avg_ij_o_city_mandate 
+FROM "policy"."china_spatial_relocation"
+INNER JOIN chinese_lookup.china_city_code_normalised ON china_spatial_relocation.citycn = china_city_code_normalised.citycn 
+ WHERE 
+      extra_code = geocode4_corr
+    ) as relocation
+    ON aggregate_pol.geocode4_corr = relocation.geocode4_corr
 WHERE 
   tso2 > 0 
   AND output > 0 
@@ -526,6 +536,7 @@ WHERE
   and employment > 0
   and current_ratio > 0
   and cashflow_to_tangible > 0
+  AND so2_intensity  > 0
   AND aggregate_pol.ind2 != '43'
   -- AND tfp_cit > 0
   LIMIT 10
@@ -539,7 +550,7 @@ output = s3.run_query(
 output
 ```
 
-# Table `XX`
+# Table `fin_dep_pollution_baseline_industry`
 
 Since the table to create has missing value, please use the following at the top of the query
 
@@ -598,6 +609,7 @@ SELECT
         citycode, 
         geocode4_corr, 
         china_city_sector_pollution.cityen, 
+        --indus_code,
         ind2,  
         tso2, 
         lower_location, 
@@ -623,6 +635,7 @@ SELECT
     province_en, 
     geocode4_corr, 
     cityen, 
+    --indus_code,
     ind2, 
     lower_location, 
     larger_location, 
@@ -638,6 +651,7 @@ SELECT
   aggregate_pol.geocode4_corr, 
   CASE WHEN tcz IS NULL THEN '0' ELSE tcz END AS tcz, 
   CASE WHEN spz IS NULL OR spz = '#N/A' THEN '0' ELSE spz END AS spz, 
+  --aggregate_pol.cic, 
   aggregate_pol.ind2, 
   CASE WHEN short IS NULL THEN 'Unknown' ELSE short END AS short, 
   polluted_d50i, 
@@ -663,6 +677,8 @@ SELECT
   tso2_mandate_c,
   above_threshold_mandate,
   above_average_mandate,
+  avg_ij_o_city_mandate,
+  d_avg_ij_o_city_mandate,
   in_10_000_tonnes, 
   tfp_cit,
   credit_constraint,
@@ -753,6 +769,7 @@ FROM
   lag_cashflow_tot_asset,
   return_to_sale,
   lag_return_to_sale
+    
   FROM firms_survey.asif_industry_financial_ratio_industry 
   WHERE year = '2002'
   ) AS asif_industry_financial_ratio_industry
@@ -853,10 +870,12 @@ FROM
       year, 
       geocode4_corr, 
       indu_2,
+      -- cic, 
       SUM(output) AS output,
       SUM(employ) AS employment, 
       SUM(captal) AS capital,
       SUM(sales) as sales,
+      --SUM(toasset) as toasset,
       AVG(tfp_op) as tfp_cit
     FROM 
       (
@@ -866,10 +885,12 @@ FROM
       asif_city.year, 
       asif_city.geocode4_corr, 
       asif_tfp_firm_level.indu_2,
+      -- asif_city.cic
       asif_city.output,
       asif_city.employ, 
       asif_city.captal, 
       asif_city.sales
+      --asif_city.toasset 
     FROM 
       firms_survey.asif_tfp_firm_level 
       RIGHT JOIN (
@@ -877,6 +898,7 @@ FROM
           firm, 
           year, 
           geocode4_corr, 
+          -- cic,
           CASE WHEN LENGTH(cic) = 4 THEN substr(cic, 1, 2) ELSE concat(
             '0', 
             substr(cic, 1, 1)
@@ -911,8 +933,10 @@ FROM
     GROUP BY 
       geocode4_corr, 
       indu_2,
+      -- cic, 
       year
   ) as agg_output ON aggregate_pol.geocode4_corr = agg_output.geocode4_corr 
+  -- AND aggregate_pol.cic = agg_output.cic 
   AND aggregate_pol.ind2 = agg_output.indu_2 
   AND aggregate_pol.year = agg_output.year 
   
@@ -922,7 +946,14 @@ FROM
   LEFT JOIN firms_survey.asif_city_characteristics_ownership
     ON aggregate_pol.geocode4_corr = asif_city_characteristics_ownership.geocode4_corr
   LEFT JOIN chinese_lookup.province_credit_constraint ON aggregate_pol.province_en = province_credit_constraint.Province
-
+  LEFT JOIN (
+    SELECT geocode4_corr, avg_ij_o_city_mandate, d_avg_ij_o_city_mandate 
+FROM "policy"."china_spatial_relocation"
+INNER JOIN chinese_lookup.china_city_code_normalised ON china_spatial_relocation.citycn = china_city_code_normalised.citycn 
+ WHERE 
+      extra_code = geocode4_corr
+    ) as relocation
+    ON aggregate_pol.geocode4_corr = relocation.geocode4_corr
 WHERE 
   tso2 > 0 
   AND output > 0 
@@ -931,7 +962,6 @@ WHERE
   and current_ratio > 0
   and cashflow_to_tangible > 0
   AND aggregate_pol.ind2 != '43'
-
 """.format(DatabaseName, table_name)
 output = s3.run_query(
                     query=query,
@@ -1012,6 +1042,8 @@ schema = [{'Name': 'year', 'Type': 'string', 'Comment': 'year from 2001 to 2007'
  {'Name': 'above_threshold_mandate',
   'Type': 'map<double,boolean>',
   'Comment': 'Policy mandate above percentile .5, .75, .9, .95'},
+  {'Name': 'avg_ij_o_city_mandate', 'Type': 'float', 'Comment': ''},
+ {'Name': 'd_avg_ij_o_city_mandate', 'Type': 'string', 'Comment': ''},
  {'Name': 'above_average_mandate', 'Type': 'varchar(5)', 'Comment': 'Policy mandate above national average'},
  {'Name': 'in_10_000_tonnes', 'Type': 'float', 'Comment': 'city reduction mandate in 10k tonnes'},
  {'Name': 'tfp_cit', 'Type': 'double', 'Comment': 'TFP at the city industry level. From https://github.com/thomaspernet/Financial_dependency_pollution/blob/master/01_data_preprocessing/02_transform_tables/05_tfp_computation.md#table-asif_tfp_firm_level'},
@@ -1158,7 +1190,7 @@ with open(path_json) as json_file:
 partition_keys = ["province_en", "geocode4_corr","ind2", "year" ]
 notebookname =  "00_credit_constraint_industry.ipynb"
 index_final_table = [0]
-if_final = 'False'
+if_final = 'True'
 ```
 
 ```python
@@ -1596,7 +1628,7 @@ create_schema.create_schema(path_json, path_save_image = os.path.join(parent_pat
 ### Update TOC in Github
 for p in [parent_path,
           str(Path(path).parent),
-          #os.path.join(str(Path(path).parent), "00_download_data_from"),
+          os.path.join(str(Path(path).parent), "00_download_data"),
           #os.path.join(str(Path(path).parent.parent), "02_data_analysis"),
           #os.path.join(str(Path(path).parent.parent), "02_data_analysis", "00_statistical_exploration"),
           #os.path.join(str(Path(path).parent.parent), "02_data_analysis", "01_model_estimation"),
