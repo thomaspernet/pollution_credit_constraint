@@ -38,7 +38,7 @@ drive = connect_drive.drive_operations(gd_auth)
 ### DOWNLOAD SPREADSHEET TO temporary_local_data folder
 FILENAME_SPREADSHEET = "China_cities_target_so2"
 spreadsheet_id = drive.find_file_id(FILENAME_SPREADSHEET, to_print=False)
-sheetName = 'relocation'
+sheetName = 'BIGQUERY_relocation'
 var = (
     drive.upload_data_from_spreadsheet(
         sheetID=spreadsheet_id,
@@ -63,27 +63,10 @@ for i in var.columns:
     print({"Name":i, "Type":"float", "Comment":""})
 ### ADD SHCEMA
 schema = [
-{'Name': 'citycn', 'Type': 'string', 'Comment': ''},
-{'Name': 'distance', 'Type': 'float', 'Comment': ''},
-{'Name': 'ttoutput_i', 'Type': 'float', 'Comment': ''},
-{'Name': 'ttoutput_j', 'Type': 'float', 'Comment': ''},
-{'Name': 'tso2_mandate_c_j', 'Type': 'float', 'Comment': ''},
-{'Name': 'SO2_perc_reduction_c_j', 'Type': 'float', 'Comment': ''},
-{'Name': 'avg_ij_o_city_mandate', 'Type': 'float', 'Comment': ''},
-{'Name': 'w_avg_ij_o_city_mandate', 'Type': 'float', 'Comment': ''},
-{'Name': 'avg_ij_city_mandate', 'Type': 'float', 'Comment': ''},
-{'Name': 'w_avg_ij_city_mandate', 'Type': 'float', 'Comment': ''},
-{'Name': 'avg_ij_o_perc_city_mandate', 'Type': 'float', 'Comment': ''},
-{'Name': 'w_avg_ij_o_perc_city_mandate', 'Type': 'float', 'Comment': ''},
-{'Name': 'avg_ij_perc_city_mandate', 'Type': 'float', 'Comment': ''},
-{'Name': 'w_avg_ij_perc_city_mandate', 'Type': 'float', 'Comment': ''},
-{'Name': 'd_avg_ij_o_city_mandate_previous', 'Type': 'float', 'Comment': ''},
-{'Name': 'd_w_avg_ij_o_city_mandate', 'Type': 'float', 'Comment': ''},
-{'Name': 'tso2_mandate_c', 'Type': 'float', 'Comment': ''},
-{'Name': 'SO2_perc_reduction_c', 'Type': 'float', 'Comment': ''},
-{'Name': 'output_diff', 'Type': 'float', 'Comment': ''},
-{'Name': 'target_diff', 'Type': 'string', 'Comment': ''},
-{'Name': 'd_avg_ij_o_city_mandate', 'Type': 'string', 'Comment': ''}
+{'Name': 'citycn', 'Type': 'float', 'Comment': ''},
+{'Name': 'geocode4_corr', 'Type': 'float', 'Comment': ''},
+{'Name': 'd_avg_ij_o_city_mandate', 'Type': 'float', 'Comment': ''},
+{'Name': 'avg_ij_o_city_mandate', 'Type': 'float', 'Comment': ''}
 ]
 
 
