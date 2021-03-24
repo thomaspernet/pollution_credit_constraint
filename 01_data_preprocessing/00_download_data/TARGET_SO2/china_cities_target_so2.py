@@ -63,8 +63,8 @@ for i in var.columns:
     print({"Name":i, "Type":"float", "Comment":""})
 ### ADD SHCEMA
 schema = [
-{'Name': 'citycn', 'Type': 'float', 'Comment': ''},
-{'Name': 'geocode4_corr', 'Type': 'float', 'Comment': ''},
+{'Name': 'citycn', 'Type': 'string', 'Comment': ''},
+{'Name': 'geocode4_corr', 'Type': 'string', 'Comment': ''},
 {'Name': 'd_avg_ij_o_city_mandate', 'Type': 'float', 'Comment': ''},
 {'Name': 'avg_ij_o_city_mandate', 'Type': 'float', 'Comment': ''}
 ]
