@@ -13,7 +13,8 @@ table_nte = None,
 reorder_var = None,
 jupyter_preview = True,
 resolution = 150,
-folder = 'Tables'):
+folder = 'Tables',
+parallel = False):
     """
     Prepare a PDF table from multiple estimates
 
