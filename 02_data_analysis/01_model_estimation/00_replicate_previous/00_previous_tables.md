@@ -457,25 +457,25 @@ for ext in ['.txt', '.tex', '.pdf']:
 to_remove <- c(21, 42, 23, 39, 33, 26, 32, 31)
 t_0 <- felm(log(tso2) ~ credit_constraint * period * tso2_mandate_c +
             log(output) + log(employment) + log(capital)
-            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr, df_final,
+            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr + ind2, df_final,
             exactDOF = TRUE)
 
 t_1 <- felm(log(tso2) ~ 
             credit_constraint * period * tso2_mandate_c +
             log(output) + log(employment) + log(capital)
-            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr, df_final %>%filter(!(ind2 %in% to_remove)),
+            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr+ ind2, df_final %>%filter(!(ind2 %in% to_remove)),
             exactDOF = TRUE)
 
 t_2 <- felm(log(so2_intensity) ~ 
             credit_constraint * period * tso2_mandate_c +
             log(output) + log(employment) + log(capital)
-            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr, df_final,
+            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr+ ind2, df_final,
             exactDOF = TRUE)
 
 t_3 <- felm(log(so2_intensity) ~ 
              credit_constraint * period * tso2_mandate_c +
             log(output) + log(employment) + log(capital)
-            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr, df_final %>%filter(!(ind2 %in% to_remove)),
+            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr+ ind2, df_final %>%filter(!(ind2 %in% to_remove)),
             exactDOF = TRUE)
             
 dep <- "Dependent variable: SO2 emission"
@@ -571,13 +571,13 @@ for ext in ['.txt', '.tex', '.pdf']:
 %get path table
 t_0 <- felm(log(tso2) ~ credit_constraint * year * tso2_mandate_c +
             log(output) + log(employment) + log(capital)
-            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr, df_final ,
+            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr+ ind2, df_final ,
             exactDOF = TRUE)
 
 t_1 <- felm(log(so2_intensity) ~ 
             credit_constraint * year * tso2_mandate_c +
             log(output) + log(employment) + log(capital) 
-            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr, df_final,
+            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr+ ind2, df_final,
             exactDOF = TRUE)
 
 dep <- "Dependent variable: SO2 emission"
@@ -679,25 +679,25 @@ for ext in ['.txt', '.tex', '.pdf']:
 ### SOE vs Private
 t_0 <- felm(log(tso2) ~ credit_constraint * period * tso2_mandate_c +
             log(output) + log(employment) + log(capital)
-            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr, df_final %>% filter(dominated_output_soe_c == TRUE),
+            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr+ ind2, df_final %>% filter(dominated_output_soe_c == TRUE),
             exactDOF = TRUE)
 
 t_1 <- felm(log(tso2) ~ 
             credit_constraint * period * tso2_mandate_c +
             log(output) + log(employment) + log(capital)
-            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr, df_final %>% filter(dominated_output_soe_c == FALSE),
+            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr+ ind2, df_final %>% filter(dominated_output_soe_c == FALSE),
             exactDOF = TRUE)
 
 ### Domestic vs foreign
 t_2 <- felm(log(tso2) ~ credit_constraint * period * tso2_mandate_c +
             log(output) + log(employment) + log(capital)
-            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr, df_final %>% filter(dominated_output_for_c == TRUE),
+            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr+ ind2, df_final %>% filter(dominated_output_for_c == TRUE),
             exactDOF = TRUE)
 
 t_3 <- felm(log(tso2) ~ 
             credit_constraint * period * tso2_mandate_c +
             log(output) + log(employment) + log(capital)
-            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr, df_final %>% filter(dominated_output_for_c == FALSE),
+            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr+ ind2, df_final %>% filter(dominated_output_for_c == FALSE),
             exactDOF = TRUE)
 
 ### Large vs Small 
@@ -712,14 +712,14 @@ df_temp_false = df_final %>%
 
 t_4 <- felm(log(tso2) ~ credit_constraint * period * tso2_mandate_c +
             log(output) + log(employment) + log(capital)
-            | fe_c_i + fe_t_i + fe_c_t |0 | ind2, df_temp_true %>% filter(
+            | fe_c_i + fe_t_i + fe_c_t |0 |geocode4_corr + ind2, df_temp_true %>% filter(
                 so2_intensity >0 ),
             exactDOF = TRUE)
 
 t_5 <- felm(log(tso2) ~ 
             credit_constraint * period * tso2_mandate_c +
             log(output) + log(employment) + log(capital)
-            | fe_c_i + fe_t_i + fe_c_t |0 | ind2, df_temp_false %>% filter(
+            | fe_c_i + fe_t_i + fe_c_t |0 |geocode4_corr + ind2, df_temp_false %>% filter(
                so2_intensity >0 ),
             exactDOF = TRUE)
 
@@ -789,25 +789,25 @@ for ext in ['.txt', '.tex', '.pdf']:
 ### SOE vs Private
 t_0 <- felm(log(so2_intensity) ~ credit_constraint * period * tso2_mandate_c +
             log(output) + log(employment) + log(capital)
-            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr, df_final %>% filter(dominated_output_soe_c == TRUE),
+            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr+ ind2, df_final %>% filter(dominated_output_soe_c == TRUE),
             exactDOF = TRUE)
 
 t_1 <- felm(log(so2_intensity) ~ 
             credit_constraint * period * tso2_mandate_c +
             log(output) + log(employment) + log(capital)
-            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr, df_final %>% filter(dominated_output_soe_c == FALSE),
+            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr+ ind2, df_final %>% filter(dominated_output_soe_c == FALSE),
             exactDOF = TRUE)
 
 ### Domestic vs foreign
 t_2 <- felm(log(so2_intensity) ~ credit_constraint * period * tso2_mandate_c +
             log(output) + log(employment) + log(capital)
-            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr, df_final %>% filter(dominated_output_for_c == TRUE),
+            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr+ ind2, df_final %>% filter(dominated_output_for_c == TRUE),
             exactDOF = TRUE)
 
 t_3 <- felm(log(so2_intensity) ~ 
             credit_constraint * period * tso2_mandate_c +
             log(output) + log(employment) + log(capital)
-            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr, df_final %>% filter(dominated_output_for_c == FALSE),
+            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr+ ind2, df_final %>% filter(dominated_output_for_c == FALSE),
             exactDOF = TRUE)
 
 ### Large vs Small 
@@ -897,25 +897,25 @@ for ext in ['.txt', '.tex', '.pdf']:
 ### SOE vs Private
 t_0 <- felm(log(tso2) ~ credit_constraint * period * tso2_mandate_c +
             log(output) + log(employment) + log(capital)
-            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr, df_final %>% filter(tcz == 1),
+            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr+ ind2, df_final %>% filter(tcz == 1),
             exactDOF = TRUE)
 
 t_1 <- felm(log(tso2) ~ 
             credit_constraint * period * tso2_mandate_c +
             log(output) + log(employment) + log(capital)
-            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr, df_final %>% filter( tcz == 0),
+            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr+ ind2, df_final %>% filter( tcz == 0),
             exactDOF = TRUE)
 
 ### Domestic vs foreign
 t_2 <- felm(log(tso2) ~ credit_constraint * period * tso2_mandate_c +
             log(output) + log(employment) + log(capital)
-            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr, df_final %>% filter(spz == 1),
+            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr+ ind2, df_final %>% filter(spz == 1),
             exactDOF = TRUE)
 
 t_3 <- felm(log(tso2) ~ 
             credit_constraint * period * tso2_mandate_c +
             log(output) + log(employment) + log(capital)
-            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr, df_final %>% filter(spz == 0),
+            | fe_c_i + fe_t_i + fe_c_t |0 | geocode4_corr+ ind2, df_final %>% filter(spz == 0),
             exactDOF = TRUE)
 dep <- "Dependent variable: SO2 emission"
 fe1 <- list(
