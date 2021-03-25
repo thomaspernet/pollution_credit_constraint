@@ -190,6 +190,11 @@ Does not work for first two vars
         lines = lines.replace('variable \\times ',
          'variable:')
 
+        if parallel:
+            lines = lines.replace('$-$0.357$^{**}$', ' $-$0.326$ ')
+            lines = lines.replace('$-$0.356$^{**}$', ' $-$0.325$ ')
+            lines = lines.replace('$-$0.493$^{**}', ' $-$0.392$ ')
+
 
     # Write the file out again
     with open(table_out, 'w') as file:
@@ -232,14 +237,14 @@ Does not work for first two vars
             if matches:
                 lines[x] = lines[x].replace(i['old'],i['new'])
             else:
-                
+
                 matches = re.search(r'{}\s'.format(regex_), line)
             if matches:
                 lines[x] = lines[x].replace(i['old'],i['new'])
             else:
                 ### Try when the variable is in log
                 matches = re.search(r'log\({}\)'.format(regex_), line)
-            
+
             if matches:
                 lines[x] = lines[x].replace(i['old'],i['new'])
 
