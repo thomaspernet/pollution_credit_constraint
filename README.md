@@ -41,4 +41,3 @@ Study how a bank’s involvement in a firm's financing may be in line with envir
      - [script_diagram_fin_dep_pollution_baseline_industry.py](https://github.com/thomaspernet/pollution_credit_constraint/tree/master/utils/IMAGES/script_diagram_fin_dep_pollution_baseline_industry.py)
    - **latex/**
      - [latex_beautify.py](https://github.com/thomaspernet/pollution_credit_constraint/tree/master/utils/latex/latex_beautify.py)
-     - [prepare_catalog.py](https://github.com/thomaspernet/pollution_credit_constraint/tree/master/utils/latex/prepare_catalog.py)
