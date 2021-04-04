@@ -9,6 +9,11 @@ addFE,
 save, name, note = FALSE){
     ### name should includes .txt extension
 
+  if (length(omit) ==0){
+  	omit = NULL
+
+  }
+
   if (note != FALSE){
 
   latex <- capture.output(stargazer(results, title=title,
@@ -16,7 +21,7 @@ save, name, note = FALSE){
           dep.var.labels.include = FALSE,
           #column.labels = columns_label,
           #column.separate = column_sep,
-          #omit = omit,
+          omit = omit,
           #order = order,
           #covariate.labels=covariates,
           align=FALSE,
@@ -35,7 +40,7 @@ save, name, note = FALSE){
           dep.var.labels.include = FALSE,
           #column.labels = columns_label,
           #column.separate = column_sep,
-          #omit = omit,
+          omit = omit,
           #order = order,
           #covariate.labels=covariates,
           align=FALSE,
