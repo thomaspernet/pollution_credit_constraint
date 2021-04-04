@@ -9,10 +9,9 @@ addFE,
 save, name, note = FALSE, omit = NULL){
     ### name should includes .txt extension
 
-  if (length(omit) ==0){
-  	omit = NULL
-
-  }
+  #if (length(omit) ==0){
+  #	omit = NULL
+  #}
 
   if (note != FALSE){
 

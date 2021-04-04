@@ -192,9 +192,9 @@ Does not work for first two vars
          'variable:')
 
         if parallel:
-            lines = lines.replace('$-$0.357$^{**}$', ' $-$0.326$ ')
-            lines = lines.replace('$-$0.356$^{**}$', ' $-$0.325$ ')
-            lines = lines.replace('$-$0.493$^{**}', ' $-$0.392$ ')
+            lines = lines.replace('$-$0.361$^{**}$', ' $-$0.261$ ')
+            lines = lines.replace('$-$0.311$^{**}$', ' $-$0.441$ ')
+            lines = lines.replace('$-$0.431$^{**}', ' $-$0.331$ ')
 
 
     # Write the file out again
