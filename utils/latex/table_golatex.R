@@ -6,7 +6,7 @@ results,
 title,
 dep_var,
 addFE,
-save, name, note = FALSE){
+save, name, note = FALSE, omit = NULL){
     ### name should includes .txt extension
 
   if (length(omit) ==0){
