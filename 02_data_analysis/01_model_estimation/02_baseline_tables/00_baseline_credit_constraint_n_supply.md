@@ -1256,6 +1256,18 @@ lb.beautify(table_number = table_nb,
 # Generate reports
 <!-- #endregion -->
 
+```sos kernel="SoS"
+folder = 'Tables_0'
+table_nb = 6
+table = 'table_{}'.format(table_nb)
+path = os.path.join(folder, table + '.txt')
+if os.path.exists(folder) == False:
+        os.mkdir(folder)
+for ext in ['.txt', '.tex', '.pdf']:
+    x = [a for a in os.listdir(folder) if a.endswith(ext)]
+    [os.remove(os.path.join(folder, i)) for i in x]
+```
+
 ```sos kernel="python3" nteract={"transient": {"deleting": false}} outputExpanded=false
 import os, time, shutil, urllib, ipykernel, json
 from pathlib import Path
@@ -1267,7 +1279,7 @@ sys.path.append(os.path.join(parent_path, 'utils'))
 import make_toc
 ```
 
-```sos kernel="SoS"
+```sos kernel="python3"
 name_json = 'parameters_ETL_pollution_credit_constraint.json'
 path_json = os.path.join(str(Path(path).parent.parent), 'utils',name_json)
 ```
@@ -1333,7 +1345,7 @@ def create_report(extension = "html", keep_code = False, notebookname = None):
 ```
 
 ```sos kernel="python3" nteract={"transient": {"deleting": false}} outputExpanded=false
-create_report(extension = "html", keep_code = False, notebookname = None)
+create_report(extension = "html", keep_code = False, notebookname = "00_baseline_credit_constraint_n_supply.ipynb")
 ```
 
 ```sos kernel="python3"
