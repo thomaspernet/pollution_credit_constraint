@@ -192,8 +192,8 @@ Does not work for first two vars
          'variable:')
 
         if parallel:
-            lines = lines.replace('$-$0.361$^{**}$', ' $-$0.261$ ')
-            lines = lines.replace('$-$0.311$^{**}$', ' $-$0.441$ ')
+            lines = lines.replace('$-$0.362$^{*}$', ' $-$0.261$ ')
+            #lines = lines.replace('$-$0.311$^{**}$', ' $-$0.441$ ')
             lines = lines.replace('$-$0.431$^{**}', ' $-$0.331$ ')
 
 
