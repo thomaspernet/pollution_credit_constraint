@@ -36,6 +36,10 @@ Study how a bank’s involvement in a firm's financing may be in line with envir
        - [00_credit_supply.md](https://github.com/thomaspernet/pollution_credit_constraint/tree/master/02_data_analysis/01_model_estimation/01_credit_supply/00_credit_supply.md)
        - **Reports/**
          - [00_credit_supply.html](https://htmlpreview.github.io/?https://github.com/thomaspernet/pollution_credit_constraint/blob/master/02_data_analysis/01_model_estimation/01_credit_supply/Reports/00_credit_supply.html)
+     - **02_baseline_tables/**
+       - [00_baseline_credit_constraint_n_supply.md](https://github.com/thomaspernet/pollution_credit_constraint/tree/master/02_data_analysis/01_model_estimation/02_baseline_tables/00_baseline_credit_constraint_n_supply.md)
+       - **Reports/**
+         - [00_baseline_credit_constraint_n_supply.html](https://htmlpreview.github.io/?https://github.com/thomaspernet/pollution_credit_constraint/blob/master/02_data_analysis/01_model_estimation/02_baseline_tables/Reports/00_baseline_credit_constraint_n_supply.html)
  - **utils/**
    - [README.md](https://github.com/thomaspernet/pollution_credit_constraint/tree/master/utils/README.md)
    - [create_schema.py](https://github.com/thomaspernet/pollution_credit_constraint/tree/master/utils/create_schema.py)
