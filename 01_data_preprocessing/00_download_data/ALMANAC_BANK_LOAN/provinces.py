@@ -48,7 +48,8 @@ var = (
 
 ### READ DATA
 var_to_keep = [
-"province",
+"province_cn",
+"province_en",
 "url",
 "year",
 "total_deposit",
@@ -77,7 +78,8 @@ s3.upload_file(input_path, PATH_S3)
 list(var.columns)
 ### ADD SHCEMA
 schema = [
-{"Name":"province", "Type":"string", "Comment":"province name"},
+{"Name":"province_cn", "Type":"string", "Comment":"province chinese name"},
+{"Name":"province_en", "Type":"string", "Comment":"province english name"},
 {"Name":"url", "Type":"string", "Comment":"google drive source file"},
 {"Name":"year", "Type":"string", "Comment":"year"},
 {"Name":"total_deposit", "Type":"float", "Comment":"All deposits of financial institutions (balance) 全部金融机构各项存款(余额)"},
