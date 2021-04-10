@@ -96,7 +96,7 @@ schema = [
 {'Name': 'icbc_loan', 'Type': 'float', 'Comment': 'loan by icbc 中国工商银行各地区人民币存款贷款余额 各项贷款合计 in 亿'},
 {'Name': 'ccb_loan', 'Type': 'float', 'Comment': 'loan by ccb 中国建设银行各地区人民币存款 贷款余额 各项贷款合计 in 亿'},
 {'Name': 'boc_loan', 'Type': 'float', 'Comment': 'loan by boc 中国银行各地区人民币存款贷款余额 各项贷款合计 in 亿'},
-{'Name': 'total_loan_big_four', 'Type': 'string', 'Comment': 'abc_loan + icbc_loan + ccb_loan + boc_loan'},
+{'Name': 'total_loan_big_four', 'Type': 'float', 'Comment': 'abc_loan + icbc_loan + ccb_loan + boc_loan'},
 {'Name': 'abc_metric', 'Type': 'string', 'Comment': 'metric display either 亿 or 万'},
 {'Name': 'icbc_metric', 'Type': 'string', 'Comment': 'metric display either 亿 or 万'},
 {'Name': 'ccb_metric', 'Type': 'string', 'Comment': 'metric display either 亿 or 万'},
