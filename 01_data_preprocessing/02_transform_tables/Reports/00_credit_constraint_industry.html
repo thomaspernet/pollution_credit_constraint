@@ -14262,7 +14262,19 @@ a.anchor-link {
 <h1 id="US-Name">US Name<a class="anchor-link" href="#US-Name">&#182;</a></h1><p>Transform fin dep pollution baseline industry table by merging china_city_reduction_mandate and others variables</p>
 <h1 id="Description">Description<a class="anchor-link" href="#Description">&#182;</a></h1><p>Step : Merge dataset to construct indsutry baseline table
 Follow this notebook to construct the table <a href="https://github.com/thomaspernet/Financial_dependency_pollution/blob/master/01_data_preprocessing/02_transform_tables/04_fin_dep_pol_baseline_city.md">https://github.com/thomaspernet/Financial_dependency_pollution/blob/master/01_data_preprocessing/02_transform_tables/04_fin_dep_pol_baseline_city.md</a> and <a href="https://github.com/thomaspernet/Financial_dependency_pollution/blob/master/01_data_preprocessing/02_transform_tables/01_fin_dep_pol_baseline.md">https://github.com/thomaspernet/Financial_dependency_pollution/blob/master/01_data_preprocessing/02_transform_tables/01_fin_dep_pol_baseline.md</a> for the industry level (less accurate)</p>
-<h2 id="Variables">Variables<a class="anchor-link" href="#Variables">&#182;</a></h2><p>None</p>
+<h2 id="Variables">Variables<a class="anchor-link" href="#Variables">&#182;</a></h2><ol>
+<li>Compute sob loan share</li>
+<li>Compute credit supply</li>
+<li>merge credit with baseline<ul>
+<li>Currently, table has province Chinese name only<ol>
+<li>Merge credit supply using year and province</li>
+<li>Merge big bank share using year and province</li>
+</ol>
+</li>
+<li>up to 2004</li>
+</ul>
+</li>
+</ol>
 <h2 id="Merge">Merge<a class="anchor-link" href="#Merge">&#182;</a></h2><ul>
 <li>china_city_reduction_mandate</li>
 <li>china_tcz_spz</li>
@@ -14428,12 +14440,12 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[5]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[7]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">query</span><span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">WITH aggregate_pol AS (</span>
-<span class="s2">SELECT </span>
+<span class="s2">  SELECT </span>
 <span class="s2">    year, </span>
 <span class="s2">    geocode4_corr, </span>
 <span class="s2">    province_en, </span>
@@ -14453,7 +14465,7 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
 <span class="s2">        geocode4_corr, </span>
 <span class="s2">        china_city_sector_pollution.cityen, </span>
 <span class="s2">        --indus_code,</span>
-<span class="s2">        ind2,  </span>
+<span class="s2">        ind2, </span>
 <span class="s2">        tso2, </span>
 <span class="s2">        lower_location, </span>
 <span class="s2">        larger_location, </span>
@@ -14463,14 +14475,14 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
 <span class="s2">        INNER JOIN (</span>
 <span class="s2">          SELECT </span>
 <span class="s2">            extra_code, </span>
-<span class="s2">            geocode4_corr,</span>
-<span class="s2">          province_en</span>
+<span class="s2">            geocode4_corr, </span>
+<span class="s2">            province_en </span>
 <span class="s2">          FROM </span>
 <span class="s2">            chinese_lookup.china_city_code_normalised </span>
 <span class="s2">          GROUP BY </span>
 <span class="s2">            extra_code, </span>
-<span class="s2">            geocode4_corr,</span>
-<span class="s2">          province_en</span>
+<span class="s2">            geocode4_corr, </span>
+<span class="s2">            province_en</span>
 <span class="s2">        ) as no_dup_citycode ON china_city_sector_pollution.citycode = no_dup_citycode.extra_code</span>
 <span class="s2">    ) </span>
 <span class="s2">  GROUP BY </span>
@@ -14493,7 +14505,8 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
 <span class="s2">  cityen, </span>
 <span class="s2">  aggregate_pol.geocode4_corr, </span>
 <span class="s2">  CASE WHEN tcz IS NULL THEN &#39;0&#39; ELSE tcz END AS tcz, </span>
-<span class="s2">  CASE WHEN spz IS NULL OR spz = &#39;#N/A&#39; THEN &#39;0&#39; ELSE spz END AS spz, </span>
+<span class="s2">  CASE WHEN spz IS NULL </span>
+<span class="s2">  OR spz = &#39;#N/A&#39; THEN &#39;0&#39; ELSE spz END AS spz, </span>
 <span class="s2">  --aggregate_pol.cic, </span>
 <span class="s2">  aggregate_pol.ind2, </span>
 <span class="s2">  CASE WHEN short IS NULL THEN &#39;Unknown&#39; ELSE short END AS short, </span>
@@ -14503,76 +14516,81 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
 <span class="s2">  polluted_d85i, </span>
 <span class="s2">  polluted_d90i, </span>
 <span class="s2">  polluted_d95i, </span>
-<span class="s2">  polluted_mi,</span>
+<span class="s2">  polluted_mi, </span>
 <span class="s2">  polluted_d50_cit, </span>
 <span class="s2">  polluted_d75_cit, </span>
 <span class="s2">  polluted_d80_cit, </span>
 <span class="s2">  polluted_d85_cit, </span>
 <span class="s2">  polluted_d90_cit, </span>
 <span class="s2">  polluted_d95_cit, </span>
-<span class="s2">  polluted_m_cit,</span>
+<span class="s2">  polluted_m_cit, </span>
 <span class="s2">  tso2, </span>
 <span class="s2">  CAST(</span>
 <span class="s2">    tso2 AS DECIMAL(16, 5)</span>
 <span class="s2">  ) / CAST(</span>
 <span class="s2">    output AS DECIMAL(16, 5)</span>
 <span class="s2">  ) AS so2_intensity, </span>
-<span class="s2">  tso2_mandate_c,</span>
-<span class="s2">  above_threshold_mandate,</span>
-<span class="s2">  above_average_mandate,</span>
-<span class="s2">  avg_ij_o_city_mandate,</span>
+<span class="s2">  tso2_mandate_c, </span>
+<span class="s2">  above_threshold_mandate, </span>
+<span class="s2">  above_average_mandate, </span>
+<span class="s2">  avg_ij_o_city_mandate, </span>
 <span class="s2">  CASE WHEN d_avg_ij_o_city_mandate IS NULL THEN &#39;FALSE&#39; ELSE d_avg_ij_o_city_mandate END AS d_avg_ij_o_city_mandate, </span>
 <span class="s2">  in_10_000_tonnes, </span>
-<span class="s2">  tfp_cit,</span>
-<span class="s2">  credit_constraint,</span>
-<span class="s2">  1/supply_all_credit as supply_all_credit,</span>
-<span class="s2">  1/supply_long_term_credit as supply_long_term_credit,</span>
-<span class="s2">  output,</span>
-<span class="s2">  sales,</span>
-<span class="s2">  employment,</span>
-<span class="s2">  capital,</span>
-<span class="s2">  current_asset,</span>
-<span class="s2">  tofixed,</span>
-<span class="s2">  total_liabilities,</span>
-<span class="s2">  total_asset,</span>
-<span class="s2">  tangible,</span>
-<span class="s2">  cashflow,</span>
-<span class="s2">  current_ratio,</span>
-<span class="s2">  lag_current_ratio,</span>
-<span class="s2">  liabilities_tot_asset,</span>
-<span class="s2">  sales_tot_asset,</span>
-<span class="s2">  lag_sales_tot_asset,</span>
-<span class="s2">  asset_tangibility_tot_asset,</span>
-<span class="s2">  lag_liabilities_tot_asset,</span>
-<span class="s2">  cashflow_to_tangible,</span>
-<span class="s2">  lag_cashflow_to_tangible,</span>
-<span class="s2">  cashflow_tot_asset,</span>
-<span class="s2">  lag_cashflow_tot_asset,</span>
-<span class="s2">  return_to_sale,</span>
-<span class="s2">  lag_return_to_sale,</span>
+<span class="s2">  tfp_cit, </span>
+<span class="s2">  credit_constraint, </span>
+<span class="s2">  1 / supply_all_credit as supply_all_credit, </span>
+<span class="s2">  1 / supply_long_term_credit as supply_long_term_credit,</span>
+<span class="s2">  share_big_bank_loan,</span>
+<span class="s2">  share_big_loan,</span>
+<span class="s2">  credit_supply,</span>
+<span class="s2">  credit_supply_long_term,</span>
+<span class="s2">  credit_supply_short_term,</span>
+<span class="s2">  output, </span>
+<span class="s2">  sales, </span>
+<span class="s2">  employment, </span>
+<span class="s2">  capital, </span>
+<span class="s2">  current_asset, </span>
+<span class="s2">  tofixed, </span>
+<span class="s2">  total_liabilities, </span>
+<span class="s2">  total_asset, </span>
+<span class="s2">  tangible, </span>
+<span class="s2">  cashflow, </span>
+<span class="s2">  current_ratio, </span>
+<span class="s2">  lag_current_ratio, </span>
+<span class="s2">  liabilities_tot_asset, </span>
+<span class="s2">  sales_tot_asset, </span>
+<span class="s2">  lag_sales_tot_asset, </span>
+<span class="s2">  asset_tangibility_tot_asset, </span>
+<span class="s2">  lag_liabilities_tot_asset, </span>
+<span class="s2">  cashflow_to_tangible, </span>
+<span class="s2">  lag_cashflow_to_tangible, </span>
+<span class="s2">  cashflow_tot_asset, </span>
+<span class="s2">  lag_cashflow_tot_asset, </span>
+<span class="s2">  return_to_sale, </span>
+<span class="s2">  lag_return_to_sale, </span>
 <span class="s2">  lower_location, </span>
 <span class="s2">  larger_location, </span>
-<span class="s2">  coastal,</span>
-<span class="s2">  dominated_output_soe_c,</span>
-<span class="s2">  dominated_employment_soe_c,</span>
-<span class="s2">  dominated_sales_soe_c,</span>
-<span class="s2">  dominated_capital_soe_c,</span>
-<span class="s2">  dominated_output_for_c,</span>
-<span class="s2">  dominated_employment_for_c,</span>
-<span class="s2">  dominated_sales_for_c,</span>
-<span class="s2">  dominated_capital_for_c,  </span>
-<span class="s2">  dominated_output_i,</span>
-<span class="s2">  dominated_employ_i,</span>
-<span class="s2">  dominated_sales_i,</span>
-<span class="s2">  dominated_capital_i,</span>
-<span class="s2">  dominated_output_soe_i,</span>
-<span class="s2">  dominated_employment_soe_i,</span>
-<span class="s2">  dominated_sales_soe_i,</span>
-<span class="s2">  dominated_capital_soe_i,</span>
-<span class="s2">  dominated_output_for_i,</span>
-<span class="s2">  dominated_employment_for_i,</span>
-<span class="s2">  dominated_sales_for_i,</span>
-<span class="s2">  dominated_capital_for_i,  </span>
+<span class="s2">  coastal, </span>
+<span class="s2">  dominated_output_soe_c, </span>
+<span class="s2">  dominated_employment_soe_c, </span>
+<span class="s2">  dominated_sales_soe_c, </span>
+<span class="s2">  dominated_capital_soe_c, </span>
+<span class="s2">  dominated_output_for_c, </span>
+<span class="s2">  dominated_employment_for_c, </span>
+<span class="s2">  dominated_sales_for_c, </span>
+<span class="s2">  dominated_capital_for_c, </span>
+<span class="s2">  dominated_output_i, </span>
+<span class="s2">  dominated_employ_i, </span>
+<span class="s2">  dominated_sales_i, </span>
+<span class="s2">  dominated_capital_i, </span>
+<span class="s2">  dominated_output_soe_i, </span>
+<span class="s2">  dominated_employment_soe_i, </span>
+<span class="s2">  dominated_sales_soe_i, </span>
+<span class="s2">  dominated_capital_soe_i, </span>
+<span class="s2">  dominated_output_for_i, </span>
+<span class="s2">  dominated_employment_for_i, </span>
+<span class="s2">  dominated_sales_for_i, </span>
+<span class="s2">  dominated_capital_for_i, </span>
 <span class="s2">  DENSE_RANK() OVER (</span>
 <span class="s2">    ORDER BY </span>
 <span class="s2">      city_mandate.geocode4_corr, </span>
@@ -14591,77 +14609,76 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
 <span class="s2">FROM </span>
 <span class="s2">  aggregate_pol </span>
 <span class="s2">  INNER JOIN (</span>
-<span class="s2">  SELECT </span>
-<span class="s2">  indu_2,</span>
-<span class="s2">  current_asset,</span>
-<span class="s2">  tofixed,</span>
-<span class="s2">  total_liabilities,</span>
-<span class="s2">  total_asset,</span>
-<span class="s2">  tangible,</span>
-<span class="s2">  cashflow,</span>
-<span class="s2">  current_ratio,</span>
-<span class="s2">  lag_current_ratio,</span>
-<span class="s2">  liabilities_tot_asset,</span>
-<span class="s2">  sales_tot_asset,</span>
-<span class="s2">  lag_sales_tot_asset,</span>
-<span class="s2">  asset_tangibility_tot_asset,</span>
-<span class="s2">  lag_liabilities_tot_asset,</span>
-<span class="s2">  cashflow_to_tangible,</span>
-<span class="s2">  lag_cashflow_to_tangible,</span>
-<span class="s2">  cashflow_tot_asset,</span>
-<span class="s2">  lag_cashflow_tot_asset,</span>
-<span class="s2">  return_to_sale,</span>
-<span class="s2">  lag_return_to_sale</span>
-<span class="s2">    </span>
-<span class="s2">  FROM firms_survey.asif_industry_financial_ratio_industry </span>
-<span class="s2">  WHERE year = &#39;2002&#39;</span>
-<span class="s2">  ) AS asif_industry_financial_ratio_industry</span>
-<span class="s2">  ON </span>
-<span class="s2">  aggregate_pol.ind2 = asif_industry_financial_ratio_industry.indu_2 </span>
+<span class="s2">    SELECT </span>
+<span class="s2">      indu_2, </span>
+<span class="s2">      current_asset, </span>
+<span class="s2">      tofixed, </span>
+<span class="s2">      total_liabilities, </span>
+<span class="s2">      total_asset, </span>
+<span class="s2">      tangible, </span>
+<span class="s2">      cashflow, </span>
+<span class="s2">      current_ratio, </span>
+<span class="s2">      lag_current_ratio, </span>
+<span class="s2">      liabilities_tot_asset, </span>
+<span class="s2">      sales_tot_asset, </span>
+<span class="s2">      lag_sales_tot_asset, </span>
+<span class="s2">      asset_tangibility_tot_asset, </span>
+<span class="s2">      lag_liabilities_tot_asset, </span>
+<span class="s2">      cashflow_to_tangible, </span>
+<span class="s2">      lag_cashflow_to_tangible, </span>
+<span class="s2">      cashflow_tot_asset, </span>
+<span class="s2">      lag_cashflow_tot_asset, </span>
+<span class="s2">      return_to_sale, </span>
+<span class="s2">      lag_return_to_sale </span>
+<span class="s2">    FROM </span>
+<span class="s2">      firms_survey.asif_industry_financial_ratio_industry </span>
+<span class="s2">    WHERE </span>
+<span class="s2">      year = &#39;2002&#39;</span>
+<span class="s2">  ) AS asif_industry_financial_ratio_industry ON aggregate_pol.ind2 = asif_industry_financial_ratio_industry.indu_2 </span>
 <span class="s2">  INNER JOIN (</span>
 <span class="s2">    SELECT </span>
-<span class="s2">  geocode4_corr, </span>
-<span class="s2">  tso2_mandate_c, </span>
-<span class="s2">  in_10_000_tonnes, </span>
-<span class="s2">  MAP(</span>
-<span class="s2">    ARRAY[.5, </span>
-<span class="s2">    .75, </span>
-<span class="s2">    .90, </span>
-<span class="s2">    .95 ], </span>
-<span class="s2">    zip_with(</span>
-<span class="s2">      transform(</span>
-<span class="s2">        sequence(1, 4), </span>
-<span class="s2">        x -&gt; tso2_mandate_c</span>
-<span class="s2">      ), </span>
-<span class="s2">      tso2_mandate_c_pct, </span>
-<span class="s2">      (x, y) -&gt; x &lt; y</span>
-<span class="s2">    )</span>
-<span class="s2">  ) AS above_threshold_mandate, </span>
-<span class="s2">  CASE WHEN tso2_mandate_c &gt; tso2_mandate_c_avg THEN &#39;ABOVE&#39; ELSE &#39;BELOW&#39; END AS above_average_mandate </span>
-<span class="s2">FROM </span>
-<span class="s2">  (</span>
-<span class="s2">    (</span>
-<span class="s2">      SELECT </span>
-<span class="s2">        &#39;TEMP&#39; as temp, </span>
-<span class="s2">        approx_percentile(</span>
-<span class="s2">          tso2_mandate_c, ARRAY[.5,.75,.90, </span>
-<span class="s2">          .95]</span>
-<span class="s2">        ) AS tso2_mandate_c_pct, </span>
-<span class="s2">        AVG(tso2_mandate_c) AS tso2_mandate_c_avg </span>
-<span class="s2">      FROM </span>
-<span class="s2">        policy.china_city_reduction_mandate</span>
-<span class="s2">    ) as percentile </span>
-<span class="s2">    LEFT JOIN (</span>
-<span class="s2">      SELECT </span>
-<span class="s2">        &#39;TEMP&#39; as temp, </span>
-<span class="s2">        citycn, </span>
-<span class="s2">        tso2_mandate_c, </span>
-<span class="s2">        in_10_000_tonnes </span>
-<span class="s2">      FROM </span>
-<span class="s2">        policy.china_city_reduction_mandate</span>
-<span class="s2">    ) as mandate ON percentile.temp = mandate.temp</span>
-<span class="s2">  ) as map_mandate</span>
-<span class="s2">  INNER JOIN chinese_lookup.china_city_code_normalised ON map_mandate.citycn = china_city_code_normalised.citycn </span>
+<span class="s2">      geocode4_corr, </span>
+<span class="s2">      tso2_mandate_c, </span>
+<span class="s2">      in_10_000_tonnes, </span>
+<span class="s2">      MAP(</span>
+<span class="s2">        ARRAY[.5, </span>
+<span class="s2">        .75, </span>
+<span class="s2">        .90, </span>
+<span class="s2">        .95 ], </span>
+<span class="s2">        zip_with(</span>
+<span class="s2">          transform(</span>
+<span class="s2">            sequence(1, 4), </span>
+<span class="s2">            x -&gt; tso2_mandate_c</span>
+<span class="s2">          ), </span>
+<span class="s2">          tso2_mandate_c_pct, </span>
+<span class="s2">          (x, y) -&gt; x &lt; y</span>
+<span class="s2">        )</span>
+<span class="s2">      ) AS above_threshold_mandate, </span>
+<span class="s2">      CASE WHEN tso2_mandate_c &gt; tso2_mandate_c_avg THEN &#39;ABOVE&#39; ELSE &#39;BELOW&#39; END AS above_average_mandate </span>
+<span class="s2">    FROM </span>
+<span class="s2">      (</span>
+<span class="s2">        (</span>
+<span class="s2">          SELECT </span>
+<span class="s2">            &#39;TEMP&#39; as temp, </span>
+<span class="s2">            approx_percentile(</span>
+<span class="s2">              tso2_mandate_c, ARRAY[.5,.75,.90, </span>
+<span class="s2">              .95]</span>
+<span class="s2">            ) AS tso2_mandate_c_pct, </span>
+<span class="s2">            AVG(tso2_mandate_c) AS tso2_mandate_c_avg </span>
+<span class="s2">          FROM </span>
+<span class="s2">            policy.china_city_reduction_mandate</span>
+<span class="s2">        ) as percentile </span>
+<span class="s2">        LEFT JOIN (</span>
+<span class="s2">          SELECT </span>
+<span class="s2">            &#39;TEMP&#39; as temp, </span>
+<span class="s2">            citycn, </span>
+<span class="s2">            tso2_mandate_c, </span>
+<span class="s2">            in_10_000_tonnes </span>
+<span class="s2">          FROM </span>
+<span class="s2">            policy.china_city_reduction_mandate</span>
+<span class="s2">        ) as mandate ON percentile.temp = mandate.temp</span>
+<span class="s2">      ) as map_mandate </span>
+<span class="s2">      INNER JOIN chinese_lookup.china_city_code_normalised ON map_mandate.citycn = china_city_code_normalised.citycn </span>
 <span class="s2">    WHERE </span>
 <span class="s2">      extra_code = geocode4_corr</span>
 <span class="s2">  ) as city_mandate ON aggregate_pol.geocode4_corr = city_mandate.geocode4_corr </span>
@@ -14670,34 +14687,32 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
 <span class="s2">  LEFT JOIN (</span>
 <span class="s2">    SELECT </span>
 <span class="s2">      ind2, </span>
-<span class="s2">      year,</span>
+<span class="s2">      year, </span>
 <span class="s2">      polluted_d50i, </span>
 <span class="s2">      polluted_d75i, </span>
 <span class="s2">      polluted_d80i, </span>
 <span class="s2">      polluted_d85i, </span>
 <span class="s2">      polluted_d90i, </span>
 <span class="s2">      polluted_d95i, </span>
-<span class="s2">      polluted_mi</span>
+<span class="s2">      polluted_mi </span>
 <span class="s2">    FROM </span>
-<span class="s2">      &quot;environment&quot;.&quot;china_sector_pollution_threshold&quot; </span>
-
+<span class="s2">      &quot;environment&quot;.&quot;china_sector_pollution_threshold&quot;</span>
 <span class="s2">  ) as polluted_sector ON aggregate_pol.ind2 = polluted_sector.ind2 </span>
 <span class="s2">  and aggregate_pol.year = polluted_sector.year </span>
 <span class="s2">  LEFT JOIN (</span>
 <span class="s2">    SELECT </span>
 <span class="s2">      ind2, </span>
-<span class="s2">      year,</span>
-<span class="s2">      geocode4_corr,</span>
+<span class="s2">      year, </span>
+<span class="s2">      geocode4_corr, </span>
 <span class="s2">      polluted_d50_cit, </span>
 <span class="s2">      polluted_d75_cit, </span>
 <span class="s2">      polluted_d80_cit, </span>
 <span class="s2">      polluted_d85_cit, </span>
 <span class="s2">      polluted_d90_cit, </span>
 <span class="s2">      polluted_d95_cit, </span>
-<span class="s2">      polluted_m_cit</span>
+<span class="s2">      polluted_m_cit </span>
 <span class="s2">    FROM </span>
-<span class="s2">      &quot;environment&quot;.&quot;china_city_sector_year_pollution_threshold&quot; </span>
-
+<span class="s2">      &quot;environment&quot;.&quot;china_city_sector_year_pollution_threshold&quot;</span>
 <span class="s2">  ) as polluted_sector_cit ON aggregate_pol.ind2 = polluted_sector_cit.ind2 </span>
 <span class="s2">  and aggregate_pol.year = polluted_sector_cit.year </span>
 <span class="s2">  and aggregate_pol.geocode4_corr = polluted_sector_cit.geocode4_corr </span>
@@ -14712,61 +14727,60 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
 <span class="s2">    SELECT </span>
 <span class="s2">      year, </span>
 <span class="s2">      geocode4_corr, </span>
-<span class="s2">      indu_2,</span>
+<span class="s2">      indu_2, </span>
 <span class="s2">      -- cic, </span>
-<span class="s2">      SUM(output) AS output,</span>
+<span class="s2">      SUM(output) AS output, </span>
 <span class="s2">      SUM(employ) AS employment, </span>
-<span class="s2">      SUM(captal) AS capital,</span>
-<span class="s2">      SUM(sales) as sales,</span>
+<span class="s2">      SUM(captal) AS capital, </span>
+<span class="s2">      SUM(sales) as sales, </span>
 <span class="s2">      --SUM(toasset) as toasset,</span>
-<span class="s2">      AVG(tfp_op) as tfp_cit</span>
+<span class="s2">      AVG(tfp_op) as tfp_cit </span>
 <span class="s2">    FROM </span>
 <span class="s2">      (</span>
 <span class="s2">        SELECT </span>
-<span class="s2">      asif_city.firm, </span>
-<span class="s2">      tfp_op, </span>
-<span class="s2">      asif_city.year, </span>
-<span class="s2">      asif_city.geocode4_corr, </span>
-<span class="s2">      asif_tfp_firm_level.indu_2,</span>
-<span class="s2">      -- asif_city.cic</span>
-<span class="s2">      asif_city.output,</span>
-<span class="s2">      asif_city.employ, </span>
-<span class="s2">      asif_city.captal, </span>
-<span class="s2">      asif_city.sales</span>
-<span class="s2">      --asif_city.toasset </span>
-<span class="s2">    FROM </span>
-<span class="s2">      firms_survey.asif_tfp_firm_level </span>
-<span class="s2">      RIGHT JOIN (</span>
-<span class="s2">        SELECT </span>
-<span class="s2">          firm, </span>
-<span class="s2">          year, </span>
-<span class="s2">          geocode4_corr, </span>
-<span class="s2">          -- cic,</span>
-<span class="s2">          CASE WHEN LENGTH(cic) = 4 THEN substr(cic, 1, 2) ELSE concat(</span>
-<span class="s2">            &#39;0&#39;, </span>
-<span class="s2">            substr(cic, 1, 1)</span>
-<span class="s2">          ) END AS indu_2, </span>
-<span class="s2">          output, </span>
-<span class="s2">          employ, </span>
-<span class="s2">          captal, </span>
-<span class="s2">          sales, </span>
-<span class="s2">          toasset </span>
+<span class="s2">          asif_city.firm, </span>
+<span class="s2">          tfp_op, </span>
+<span class="s2">          asif_city.year, </span>
+<span class="s2">          asif_city.geocode4_corr, </span>
+<span class="s2">          asif_tfp_firm_level.indu_2, </span>
+<span class="s2">          -- asif_city.cic</span>
+<span class="s2">          asif_city.output, </span>
+<span class="s2">          asif_city.employ, </span>
+<span class="s2">          asif_city.captal, </span>
+<span class="s2">          asif_city.sales --asif_city.toasset </span>
 <span class="s2">        FROM </span>
-<span class="s2">          firms_survey.asif_firms_prepared </span>
-<span class="s2">          INNER JOIN (</span>
+<span class="s2">          firms_survey.asif_tfp_firm_level </span>
+<span class="s2">          RIGHT JOIN (</span>
 <span class="s2">            SELECT </span>
-<span class="s2">              extra_code, </span>
-<span class="s2">              geocode4_corr </span>
+<span class="s2">              firm, </span>
+<span class="s2">              year, </span>
+<span class="s2">              geocode4_corr, </span>
+<span class="s2">              -- cic,</span>
+<span class="s2">              CASE WHEN LENGTH(cic) = 4 THEN substr(cic, 1, 2) ELSE concat(</span>
+<span class="s2">                &#39;0&#39;, </span>
+<span class="s2">                substr(cic, 1, 1)</span>
+<span class="s2">              ) END AS indu_2, </span>
+<span class="s2">              output, </span>
+<span class="s2">              employ, </span>
+<span class="s2">              captal, </span>
+<span class="s2">              sales, </span>
+<span class="s2">              toasset </span>
 <span class="s2">            FROM </span>
-<span class="s2">              chinese_lookup.china_city_code_normalised </span>
-<span class="s2">            GROUP BY </span>
-<span class="s2">              extra_code, </span>
-<span class="s2">              geocode4_corr</span>
-<span class="s2">          ) as no_dup_citycode ON asif_firms_prepared.citycode = no_dup_citycode.extra_code</span>
-<span class="s2">      ) as asif_city ON asif_tfp_firm_level.firm = asif_city.firm </span>
-<span class="s2">      and asif_tfp_firm_level.year = asif_city.year </span>
-<span class="s2">      and asif_tfp_firm_level.indu_2 = asif_city.indu_2 </span>
-<span class="s2">      and asif_tfp_firm_level.geocode4_corr = asif_city.geocode4_corr </span>
+<span class="s2">              firms_survey.asif_firms_prepared </span>
+<span class="s2">              INNER JOIN (</span>
+<span class="s2">                SELECT </span>
+<span class="s2">                  extra_code, </span>
+<span class="s2">                  geocode4_corr </span>
+<span class="s2">                FROM </span>
+<span class="s2">                  chinese_lookup.china_city_code_normalised </span>
+<span class="s2">                GROUP BY </span>
+<span class="s2">                  extra_code, </span>
+<span class="s2">                  geocode4_corr</span>
+<span class="s2">              ) as no_dup_citycode ON asif_firms_prepared.citycode = no_dup_citycode.extra_code</span>
+<span class="s2">          ) as asif_city ON asif_tfp_firm_level.firm = asif_city.firm </span>
+<span class="s2">          and asif_tfp_firm_level.year = asif_city.year </span>
+<span class="s2">          and asif_tfp_firm_level.indu_2 = asif_city.indu_2 </span>
+<span class="s2">          and asif_tfp_firm_level.geocode4_corr = asif_city.geocode4_corr</span>
 <span class="s2">      ) </span>
 <span class="s2">    WHERE </span>
 <span class="s2">      year in (</span>
@@ -14775,35 +14789,70 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
 <span class="s2">      ) </span>
 <span class="s2">    GROUP BY </span>
 <span class="s2">      geocode4_corr, </span>
-<span class="s2">      indu_2,</span>
+<span class="s2">      indu_2, </span>
 <span class="s2">      -- cic, </span>
 <span class="s2">      year</span>
-<span class="s2">  ) as agg_output ON aggregate_pol.geocode4_corr = agg_output.geocode4_corr </span>
-<span class="s2">  -- AND aggregate_pol.cic = agg_output.cic </span>
+<span class="s2">  ) as agg_output ON aggregate_pol.geocode4_corr = agg_output.geocode4_corr -- AND aggregate_pol.cic = agg_output.cic </span>
 <span class="s2">  AND aggregate_pol.ind2 = agg_output.indu_2 </span>
 <span class="s2">  AND aggregate_pol.year = agg_output.year </span>
-<span class="s2">  </span>
-<span class="s2">  LEFT JOIN firms_survey.asif_industry_characteristics_ownership</span>
-<span class="s2">    ON aggregate_pol.geocode4_corr = asif_industry_characteristics_ownership.geocode4_corr</span>
-<span class="s2">    AND aggregate_pol.ind2 = asif_industry_characteristics_ownership.indu_2</span>
-<span class="s2">  LEFT JOIN firms_survey.asif_city_characteristics_ownership</span>
-<span class="s2">    ON aggregate_pol.geocode4_corr = asif_city_characteristics_ownership.geocode4_corr</span>
-<span class="s2">  LEFT JOIN chinese_lookup.province_credit_constraint ON aggregate_pol.province_en = province_credit_constraint.Province</span>
+<span class="s2">  LEFT JOIN firms_survey.asif_industry_characteristics_ownership ON aggregate_pol.geocode4_corr = asif_industry_characteristics_ownership.geocode4_corr </span>
+<span class="s2">  AND aggregate_pol.ind2 = asif_industry_characteristics_ownership.indu_2 </span>
+<span class="s2">  LEFT JOIN firms_survey.asif_city_characteristics_ownership ON aggregate_pol.geocode4_corr = asif_city_characteristics_ownership.geocode4_corr </span>
+<span class="s2">  LEFT JOIN chinese_lookup.province_credit_constraint ON aggregate_pol.province_en = province_credit_constraint.Province </span>
 <span class="s2">  LEFT JOIN (</span>
-<span class="s2">    SELECT geocode4_corr, avg_ij_o_city_mandate, d_avg_ij_o_city_mandate </span>
-<span class="s2">    FROM &quot;policy&quot;.&quot;china_spatial_relocation&quot; </span>
-<span class="s2">    ) as relocation</span>
-<span class="s2">    ON aggregate_pol.geocode4_corr = relocation.geocode4_corr</span>
+<span class="s2">    SELECT </span>
+<span class="s2">      geocode4_corr, </span>
+<span class="s2">      avg_ij_o_city_mandate, </span>
+<span class="s2">      d_avg_ij_o_city_mandate </span>
+<span class="s2">    FROM </span>
+<span class="s2">      &quot;policy&quot;.&quot;china_spatial_relocation&quot;</span>
+<span class="s2">  ) as relocation ON aggregate_pol.geocode4_corr = relocation.geocode4_corr </span>
+<span class="s2">  LEFT JOIN (</span>
+<span class="s2">    SELECT </span>
+<span class="s2">      province_loan_and_credit.year, </span>
+<span class="s2">      province_loan_and_credit.province_en, </span>
+<span class="s2">      CAST(</span>
+<span class="s2">        total_loan_big_four AS DECIMAL(16, 5)</span>
+<span class="s2">      )/ CAST(</span>
+<span class="s2">        total_bank_loan AS DECIMAL(16, 5)</span>
+<span class="s2">      ) AS share_big_bank_loan, </span>
+<span class="s2">      CAST(</span>
+<span class="s2">        total_loan_big_four AS DECIMAL(16, 5)</span>
+<span class="s2">      )/ CAST(</span>
+<span class="s2">        total_loan AS DECIMAL(16, 5)</span>
+<span class="s2">      ) AS share_big_loan, </span>
+<span class="s2">      CAST(</span>
+<span class="s2">        total_bank_loan AS DECIMAL(16, 5)</span>
+<span class="s2">      )/ CAST(</span>
+<span class="s2">        total_gdp AS DECIMAL(16, 5)</span>
+<span class="s2">      ) AS credit_supply, </span>
+<span class="s2">      CAST(</span>
+<span class="s2">        total_long_term_loan AS DECIMAL(16, 5)</span>
+<span class="s2">      )/ CAST(</span>
+<span class="s2">        total_gdp AS DECIMAL(16, 5)</span>
+<span class="s2">      ) AS credit_supply_long_term, </span>
+<span class="s2">      CAST(</span>
+<span class="s2">        total_short_term AS DECIMAL(16, 5)</span>
+<span class="s2">      )/ CAST(</span>
+<span class="s2">        total_gdp AS DECIMAL(16, 5)</span>
+<span class="s2">      ) AS credit_supply_short_term </span>
+<span class="s2">    FROM </span>
+<span class="s2">      almanac_bank_china.bank_socb_loan </span>
+<span class="s2">      RIGHT JOIN almanac_bank_china.province_loan_and_credit ON bank_socb_loan.year = province_loan_and_credit.year </span>
+<span class="s2">      AND bank_socb_loan.province_en = province_loan_and_credit.province_en</span>
+<span class="s2">  ) as credit ON aggregate_pol.year = credit.year </span>
+<span class="s2">  AND aggregate_pol.province_en = credit.province_en </span>
 <span class="s2">WHERE </span>
 <span class="s2">  tso2 &gt; 0 </span>
 <span class="s2">  AND output &gt; 0 </span>
 <span class="s2">  and capital &gt; 0 </span>
-<span class="s2">  and employment &gt; 0</span>
-<span class="s2">  and current_ratio &gt; 0</span>
-<span class="s2">  and cashflow_to_tangible &gt; 0</span>
-<span class="s2">  AND aggregate_pol.ind2 != &#39;43&#39;</span>
-<span class="s2">  -- AND tfp_cit &gt; 0</span>
-<span class="s2">  LIMIT 10</span>
+<span class="s2">  and employment &gt; 0 </span>
+<span class="s2">  and current_ratio &gt; 0 </span>
+<span class="s2">  and cashflow_to_tangible &gt; 0 </span>
+<span class="s2">  AND aggregate_pol.ind2 != &#39;43&#39; -- AND tfp_cit &gt; 0</span>
+<span class="s2">LIMIT </span>
+<span class="s2">  10</span>
+
 <span class="s2">&quot;&quot;&quot;</span>
 <span class="n">output</span> <span class="o">=</span> <span class="n">s3</span><span class="o">.</span><span class="n">run_query</span><span class="p">(</span>
                     <span class="n">query</span><span class="o">=</span><span class="n">query</span><span class="p">,</span>
@@ -14827,7 +14876,7 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
 <div class="jp-OutputArea-child">
 
     
-    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[5]:</div>
+    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[7]:</div>
 
 
 
@@ -14885,6 +14934,11 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
       <th>credit_constraint</th>
       <th>supply_all_credit</th>
       <th>supply_long_term_credit</th>
+      <th>share_big_bank_loan</th>
+      <th>share_big_loan</th>
+      <th>credit_supply</th>
+      <th>credit_supply_long_term</th>
+      <th>credit_supply_short_term</th>
       <th>output</th>
       <th>sales</th>
       <th>employment</th>
@@ -14946,57 +15000,62 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
       <td>1101</td>
       <td>1</td>
       <td>1</td>
-      <td>32</td>
-      <td>Smelting ferrous Metals</td>
-      <td>ABOVE</td>
-      <td>ABOVE</td>
-      <td>ABOVE</td>
-      <td>ABOVE</td>
-      <td>ABOVE</td>
+      <td>36</td>
+      <td>Special Purpose Machinery</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
       <td>BELOW</td>
       <td>ABOVE</td>
-      <td>ABOVE</td>
-      <td>ABOVE</td>
-      <td>ABOVE</td>
-      <td>ABOVE</td>
-      <td>ABOVE</td>
-      <td>ABOVE</td>
-      <td>ABOVE</td>
-      <td>5635016</td>
-      <td>0.19532</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>731974</td>
+      <td>0.09755</td>
       <td>0.381358</td>
       <td>{0.5=false, 0.9=false, 0.75=false, 0.95=true}</td>
       <td>ABOVE</td>
       <td>-0.002122</td>
       <td>True</td>
       <td>3.813583</td>
-      <td>9.778233</td>
-      <td>0.33</td>
+      <td>8.483465</td>
+      <td>-0.27</td>
       <td>0.436681</td>
       <td>0.787402</td>
-      <td>28849830</td>
-      <td>21808853</td>
-      <td>88611</td>
-      <td>10930831</td>
-      <td>144535583</td>
-      <td>528571276</td>
-      <td>405251252</td>
-      <td>795414042</td>
-      <td>505164096</td>
-      <td>35958163</td>
-      <td>0.48463</td>
-      <td>0.57235</td>
-      <td>0.50955</td>
-      <td>0.56688</td>
-      <td>0.49309</td>
-      <td>0.63510</td>
-      <td>0.46516</td>
-      <td>0.07118</td>
-      <td>0.06903</td>
-      <td>0.04521</td>
-      <td>0.04132</td>
-      <td>0.04177</td>
-      <td>0.03323</td>
+      <td>0.46406</td>
+      <td>0.94521</td>
+      <td>2.5564</td>
+      <td>1.15999</td>
+      <td>1.16092</td>
+      <td>7503942</td>
+      <td>7454082</td>
+      <td>31052</td>
+      <td>3246701</td>
+      <td>97883198</td>
+      <td>94067086</td>
+      <td>137444697</td>
+      <td>242880184</td>
+      <td>90215554</td>
+      <td>8390342</td>
+      <td>0.85633</td>
+      <td>0.89018</td>
+      <td>0.56761</td>
+      <td>0.58017</td>
+      <td>0.51770</td>
+      <td>0.37144</td>
+      <td>0.56923</td>
+      <td>0.09300</td>
+      <td>0.06864</td>
+      <td>0.03455</td>
+      <td>0.02758</td>
+      <td>0.04288</td>
+      <td>0.03177</td>
       <td>Coastal</td>
       <td>Eastern</td>
       <td>No</td>
@@ -15008,20 +15067,20 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
       <td>False</td>
       <td>False</td>
       <td>False</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
+      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
+      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
+      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
+      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
+      <td>{0.5=false, 0.9=true, 0.75=false, 0.95=true}</td>
       <td>{0.5=false, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
+      <td>{0.5=false, 0.9=true, 0.75=false, 0.95=true}</td>
       <td>{0.5=false, 0.9=true, 0.75=false, 0.95=true}</td>
       <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
+      <td>{0.5=true, 0.9=false, 0.75=false, 0.95=false}</td>
       <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
       <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=false}</td>
-      <td>20</td>
-      <td>20</td>
+      <td>24</td>
+      <td>24</td>
       <td>1</td>
     </tr>
     <tr>
@@ -15033,57 +15092,62 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
       <td>1101</td>
       <td>1</td>
       <td>1</td>
-      <td>17</td>
-      <td>Textile</td>
-      <td>ABOVE</td>
-      <td>ABOVE</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>ABOVE</td>
-      <td>ABOVE</td>
+      <td>34</td>
+      <td>Metals</td>
       <td>BELOW</td>
       <td>BELOW</td>
       <td>BELOW</td>
       <td>BELOW</td>
       <td>BELOW</td>
       <td>BELOW</td>
-      <td>673067</td>
-      <td>0.17436</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>249373</td>
+      <td>0.05015</td>
       <td>0.381358</td>
       <td>{0.5=false, 0.9=false, 0.75=false, 0.95=true}</td>
       <td>ABOVE</td>
       <td>-0.002122</td>
       <td>True</td>
       <td>3.813583</td>
-      <td>8.620492</td>
-      <td>-0.48</td>
+      <td>8.295621</td>
+      <td>-0.93</td>
       <td>0.436681</td>
       <td>0.787402</td>
-      <td>3860145</td>
-      <td>3619444</td>
-      <td>35832</td>
-      <td>1944138</td>
-      <td>120085626</td>
-      <td>208985328</td>
-      <td>234306347</td>
-      <td>403090368</td>
-      <td>198318767</td>
-      <td>19960315</td>
-      <td>0.69445</td>
-      <td>0.72564</td>
-      <td>0.58291</td>
-      <td>0.75885</td>
-      <td>0.71025</td>
-      <td>0.49200</td>
-      <td>0.58934</td>
-      <td>0.10065</td>
-      <td>0.08637</td>
-      <td>0.04952</td>
-      <td>0.04290</td>
-      <td>0.03841</td>
-      <td>0.03145</td>
+      <td>0.46406</td>
+      <td>0.94521</td>
+      <td>2.5564</td>
+      <td>1.15999</td>
+      <td>1.16092</td>
+      <td>4972566</td>
+      <td>4939740</td>
+      <td>29444</td>
+      <td>2524284</td>
+      <td>47555795</td>
+      <td>52420187</td>
+      <td>70850134</td>
+      <td>121499371</td>
+      <td>49675209</td>
+      <td>6397882</td>
+      <td>0.85907</td>
+      <td>0.86831</td>
+      <td>0.58474</td>
+      <td>0.82533</td>
+      <td>0.74477</td>
+      <td>0.40885</td>
+      <td>0.57940</td>
+      <td>0.12879</td>
+      <td>0.10148</td>
+      <td>0.05266</td>
+      <td>0.04413</td>
+      <td>0.04506</td>
+      <td>0.03938</td>
       <td>Coastal</td>
       <td>Eastern</td>
       <td>No</td>
@@ -15096,19 +15160,19 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
       <td>False</td>
       <td>False</td>
       <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
       <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
       <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
-      <td>{0.5=false, 0.9=true, 0.75=true, 0.95=true}</td>
+      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
+      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
+      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
+      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
+      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
       <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=false, 0.9=true, 0.75=true, 0.95=true}</td>
       <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=false}</td>
-      <td>{0.5=true, 0.9=false, 0.75=true, 0.95=false}</td>
-      <td>{0.5=true, 0.9=false, 0.75=true, 0.95=false}</td>
-      <td>{0.5=true, 0.9=false, 0.75=true, 0.95=false}</td>
-      <td>5</td>
-      <td>5</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
+      <td>22</td>
+      <td>22</td>
       <td>1</td>
     </tr>
     <tr>
@@ -15120,8 +15184,8 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
       <td>1101</td>
       <td>1</td>
       <td>1</td>
-      <td>19</td>
-      <td>Fur</td>
+      <td>24</td>
+      <td>Education and Sport Activity"</td>
       <td>BELOW</td>
       <td>BELOW</td>
       <td>BELOW</td>
@@ -15136,41 +15200,46 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
       <td>BELOW</td>
       <td>BELOW</td>
       <td>BELOW</td>
-      <td>21595</td>
-      <td>0.06748</td>
+      <td>52706</td>
+      <td>0.05084</td>
       <td>0.381358</td>
       <td>{0.5=false, 0.9=false, 0.75=false, 0.95=true}</td>
       <td>ABOVE</td>
       <td>-0.002122</td>
       <td>True</td>
       <td>3.813583</td>
-      <td>8.086111</td>
-      <td>-1.11</td>
+      <td>8.578477</td>
+      <td>-0.40</td>
       <td>0.436681</td>
       <td>0.787402</td>
-      <td>320036</td>
-      <td>333743</td>
-      <td>5108</td>
-      <td>218615</td>
-      <td>18260631</td>
-      <td>15317797</td>
-      <td>23885738</td>
-      <td>41353279</td>
-      <td>14559970</td>
-      <td>2919238</td>
-      <td>0.95634</td>
-      <td>0.97535</td>
-      <td>0.58238</td>
-      <td>1.27219</td>
-      <td>1.19966</td>
-      <td>0.35209</td>
-      <td>0.56555</td>
-      <td>0.20050</td>
-      <td>0.16972</td>
-      <td>0.07059</td>
-      <td>0.05816</td>
-      <td>0.04739</td>
-      <td>0.04053</td>
+      <td>0.46406</td>
+      <td>0.94521</td>
+      <td>2.5564</td>
+      <td>1.15999</td>
+      <td>1.16092</td>
+      <td>1036748</td>
+      <td>1018540</td>
+      <td>8012</td>
+      <td>317532</td>
+      <td>7497850</td>
+      <td>8586473</td>
+      <td>10859477</td>
+      <td>20245625</td>
+      <td>8090341</td>
+      <td>1150256</td>
+      <td>0.84728</td>
+      <td>0.92729</td>
+      <td>0.51269</td>
+      <td>0.86959</td>
+      <td>0.74861</td>
+      <td>0.39961</td>
+      <td>0.53057</td>
+      <td>0.14218</td>
+      <td>0.14361</td>
+      <td>0.05682</td>
+      <td>0.05212</td>
+      <td>0.04846</td>
+      <td>0.05020</td>
       <td>Coastal</td>
       <td>Eastern</td>
       <td>No</td>
@@ -15183,23 +15252,115 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
       <td>False</td>
       <td>False</td>
       <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
-      <td>{0.5=true, 0.9=false, 0.75=false, 0.95=false}</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=false}</td>
       <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
       <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
-      <td>{0.5=false, 0.9=false, 0.75=true, 0.95=true}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=true}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
       <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
-      <td>{0.5=true, 0.9=false, 0.75=false, 0.95=true}</td>
-      <td>{0.5=true, 0.9=false, 0.75=false, 0.95=false}</td>
       <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
-      <td>7</td>
-      <td>7</td>
+      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
+      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=false}</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=false}</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=false}</td>
+      <td>{0.5=true, 0.9=false, 0.75=true, 0.95=false}</td>
+      <td>12</td>
+      <td>12</td>
       <td>1</td>
     </tr>
     <tr>
       <th>3</th>
+      <td>2001</td>
+      <td>False</td>
+      <td>Beijing</td>
+      <td>Beijing</td>
+      <td>1101</td>
+      <td>1</td>
+      <td>1</td>
+      <td>15</td>
+      <td>Beverages</td>
+      <td>ABOVE</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>ABOVE</td>
+      <td>ABOVE</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>ABOVE</td>
+      <td>1534035</td>
+      <td>0.25300</td>
+      <td>0.381358</td>
+      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=true}</td>
+      <td>ABOVE</td>
+      <td>-0.002122</td>
+      <td>True</td>
+      <td>3.813583</td>
+      <td>9.248696</td>
+      <td>-0.72</td>
+      <td>0.436681</td>
+      <td>0.787402</td>
+      <td>0.46406</td>
+      <td>0.94521</td>
+      <td>2.5564</td>
+      <td>1.15999</td>
+      <td>1.16092</td>
+      <td>6063401</td>
+      <td>5858998</td>
+      <td>21019</td>
+      <td>3298388</td>
+      <td>47463723</td>
+      <td>79137954</td>
+      <td>86085108</td>
+      <td>172719565</td>
+      <td>75383405</td>
+      <td>10096058</td>
+      <td>0.66973</td>
+      <td>0.70635</td>
+      <td>0.49880</td>
+      <td>0.56788</td>
+      <td>0.55498</td>
+      <td>0.43645</td>
+      <td>0.50818</td>
+      <td>0.13393</td>
+      <td>0.13395</td>
+      <td>0.05845</td>
+      <td>0.05991</td>
+      <td>0.08347</td>
+      <td>0.08255</td>
+      <td>Coastal</td>
+      <td>Eastern</td>
+      <td>No</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
+      <td>{0.5=false, 0.9=true, 0.75=false, 0.95=true}</td>
+      <td>{0.5=false, 0.9=true, 0.75=false, 0.95=true}</td>
+      <td>{0.5=false, 0.9=true, 0.75=false, 0.95=true}</td>
+      <td>{0.5=false, 0.9=true, 0.75=false, 0.95=true}</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=false}</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=false}</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
+      <td>3</td>
+      <td>3</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>4</th>
       <td>2001</td>
       <td>False</td>
       <td>Beijing</td>
@@ -15235,6 +15396,11 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
       <td>-0.29</td>
       <td>0.436681</td>
       <td>0.787402</td>
+      <td>0.46406</td>
+      <td>0.94521</td>
+      <td>2.5564</td>
+      <td>1.15999</td>
+      <td>1.16092</td>
       <td>7971362</td>
       <td>7855152</td>
       <td>63987</td>
@@ -15286,7 +15452,7 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
       <td>1</td>
     </tr>
     <tr>
-      <th>4</th>
+      <th>5</th>
       <td>2001</td>
       <td>False</td>
       <td>Beijing</td>
@@ -15294,57 +15460,246 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
       <td>1101</td>
       <td>1</td>
       <td>1</td>
-      <td>23</td>
-      <td>Reproduction of Recording Media"</td>
+      <td>32</td>
+      <td>Smelting ferrous Metals</td>
+      <td>ABOVE</td>
+      <td>ABOVE</td>
+      <td>ABOVE</td>
+      <td>ABOVE</td>
+      <td>ABOVE</td>
       <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>383670</td>
-      <td>0.13863</td>
+      <td>ABOVE</td>
+      <td>ABOVE</td>
+      <td>ABOVE</td>
+      <td>ABOVE</td>
+      <td>ABOVE</td>
+      <td>ABOVE</td>
+      <td>ABOVE</td>
+      <td>ABOVE</td>
+      <td>5635016</td>
+      <td>0.19532</td>
       <td>0.381358</td>
       <td>{0.5=false, 0.9=false, 0.75=false, 0.95=true}</td>
       <td>ABOVE</td>
       <td>-0.002122</td>
       <td>True</td>
       <td>3.813583</td>
-      <td>8.138349</td>
-      <td>-0.80</td>
+      <td>9.778233</td>
+      <td>0.33</td>
       <td>0.436681</td>
       <td>0.787402</td>
-      <td>2767682</td>
-      <td>2721524</td>
-      <td>23773</td>
-      <td>2045065</td>
-      <td>13407065</td>
-      <td>30001471</td>
-      <td>27735934</td>
-      <td>52261924</td>
-      <td>28199358</td>
-      <td>3359755</td>
-      <td>0.64424</td>
-      <td>0.67209</td>
-      <td>0.53391</td>
-      <td>0.54813</td>
-      <td>0.53867</td>
-      <td>0.53958</td>
-      <td>0.52505</td>
-      <td>0.11914</td>
-      <td>0.14157</td>
-      <td>0.06429</td>
-      <td>0.07266</td>
-      <td>0.07356</td>
-      <td>0.08991</td>
+      <td>0.46406</td>
+      <td>0.94521</td>
+      <td>2.5564</td>
+      <td>1.15999</td>
+      <td>1.16092</td>
+      <td>28849830</td>
+      <td>21808853</td>
+      <td>88611</td>
+      <td>10930831</td>
+      <td>144535583</td>
+      <td>528571276</td>
+      <td>405251252</td>
+      <td>795414042</td>
+      <td>505164096</td>
+      <td>35958163</td>
+      <td>0.48463</td>
+      <td>0.57235</td>
+      <td>0.50955</td>
+      <td>0.56688</td>
+      <td>0.49309</td>
+      <td>0.63510</td>
+      <td>0.46516</td>
+      <td>0.07118</td>
+      <td>0.06903</td>
+      <td>0.04521</td>
+      <td>0.04132</td>
+      <td>0.04177</td>
+      <td>0.03323</td>
+      <td>Coastal</td>
+      <td>Eastern</td>
+      <td>No</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
+      <td>{0.5=false, 0.9=true, 0.75=true, 0.95=true}</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
+      <td>{0.5=false, 0.9=true, 0.75=false, 0.95=true}</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=false}</td>
+      <td>20</td>
+      <td>20</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>2001</td>
+      <td>False</td>
+      <td>Beijing</td>
+      <td>Beijing</td>
+      <td>1101</td>
+      <td>1</td>
+      <td>1</td>
+      <td>13</td>
+      <td>Processing foods</td>
+      <td>ABOVE</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>203034</td>
+      <td>0.04779</td>
+      <td>0.381358</td>
+      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=true}</td>
+      <td>ABOVE</td>
+      <td>-0.002122</td>
+      <td>True</td>
+      <td>3.813583</td>
+      <td>8.759098</td>
+      <td>-0.47</td>
+      <td>0.436681</td>
+      <td>0.787402</td>
+      <td>0.46406</td>
+      <td>0.94521</td>
+      <td>2.5564</td>
+      <td>1.15999</td>
+      <td>1.16092</td>
+      <td>4248425</td>
+      <td>4157623</td>
+      <td>17098</td>
+      <td>1313910</td>
+      <td>7460523</td>
+      <td>8426462</td>
+      <td>11731396</td>
+      <td>19611545</td>
+      <td>7974840</td>
+      <td>1116406</td>
+      <td>0.81110</td>
+      <td>0.66649</td>
+      <td>0.59966</td>
+      <td>0.90341</td>
+      <td>1.14435</td>
+      <td>0.40664</td>
+      <td>0.60610</td>
+      <td>0.13999</td>
+      <td>0.10736</td>
+      <td>0.05693</td>
+      <td>0.04864</td>
+      <td>0.04423</td>
+      <td>0.02933</td>
+      <td>Coastal</td>
+      <td>Eastern</td>
+      <td>No</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=false}</td>
+      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=false}</td>
+      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
+      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
+      <td>{0.5=false, 0.9=false, 0.75=true, 0.95=true}</td>
+      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
+      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=false}</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=false}</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>2001</td>
+      <td>False</td>
+      <td>Beijing</td>
+      <td>Beijing</td>
+      <td>1101</td>
+      <td>1</td>
+      <td>1</td>
+      <td>19</td>
+      <td>Fur</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>21595</td>
+      <td>0.06748</td>
+      <td>0.381358</td>
+      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=true}</td>
+      <td>ABOVE</td>
+      <td>-0.002122</td>
+      <td>True</td>
+      <td>3.813583</td>
+      <td>8.086111</td>
+      <td>-1.11</td>
+      <td>0.436681</td>
+      <td>0.787402</td>
+      <td>0.46406</td>
+      <td>0.94521</td>
+      <td>2.5564</td>
+      <td>1.15999</td>
+      <td>1.16092</td>
+      <td>320036</td>
+      <td>333743</td>
+      <td>5108</td>
+      <td>218615</td>
+      <td>18260631</td>
+      <td>15317797</td>
+      <td>23885738</td>
+      <td>41353279</td>
+      <td>14559970</td>
+      <td>2919238</td>
+      <td>0.95634</td>
+      <td>0.97535</td>
+      <td>0.58238</td>
+      <td>1.27219</td>
+      <td>1.19966</td>
+      <td>0.35209</td>
+      <td>0.56555</td>
+      <td>0.20050</td>
+      <td>0.16972</td>
+      <td>0.07059</td>
+      <td>0.05816</td>
+      <td>0.04739</td>
+      <td>0.04053</td>
       <td>Coastal</td>
       <td>Eastern</td>
       <td>No</td>
@@ -15357,23 +15712,115 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
       <td>False</td>
       <td>False</td>
       <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
+      <td>{0.5=true, 0.9=false, 0.75=false, 0.95=false}</td>
       <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
       <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
-      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
-      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
-      <td>{0.5=false, 0.9=true, 0.75=false, 0.95=true}</td>
-      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
-      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
+      <td>{0.5=false, 0.9=false, 0.75=true, 0.95=true}</td>
       <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=false}</td>
+      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=true}</td>
       <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>11</td>
-      <td>11</td>
+      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
+      <td>{0.5=true, 0.9=false, 0.75=false, 0.95=true}</td>
+      <td>{0.5=true, 0.9=false, 0.75=false, 0.95=false}</td>
+      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
+      <td>7</td>
+      <td>7</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>5</th>
+      <th>8</th>
+      <td>2001</td>
+      <td>False</td>
+      <td>Beijing</td>
+      <td>Beijing</td>
+      <td>1101</td>
+      <td>1</td>
+      <td>1</td>
+      <td>29</td>
+      <td>Rubber</td>
+      <td>ABOVE</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>ABOVE</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>BELOW</td>
+      <td>610008</td>
+      <td>0.70805</td>
+      <td>0.381358</td>
+      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=true}</td>
+      <td>ABOVE</td>
+      <td>-0.002122</td>
+      <td>True</td>
+      <td>3.813583</td>
+      <td>8.782994</td>
+      <td>-0.26</td>
+      <td>0.436681</td>
+      <td>0.787402</td>
+      <td>0.46406</td>
+      <td>0.94521</td>
+      <td>2.5564</td>
+      <td>1.15999</td>
+      <td>1.16092</td>
+      <td>861534</td>
+      <td>894018</td>
+      <td>6186</td>
+      <td>346977</td>
+      <td>29450432</td>
+      <td>44644079</td>
+      <td>52600301</td>
+      <td>89026864</td>
+      <td>42578713</td>
+      <td>4122938</td>
+      <td>0.74642</td>
+      <td>0.75767</td>
+      <td>0.59130</td>
+      <td>0.63430</td>
+      <td>0.58644</td>
+      <td>0.47827</td>
+      <td>0.61504</td>
+      <td>0.09683</td>
+      <td>0.08159</td>
+      <td>0.04631</td>
+      <td>0.03891</td>
+      <td>0.04433</td>
+      <td>0.03250</td>
+      <td>Coastal</td>
+      <td>Eastern</td>
+      <td>No</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>{0.5=false, 0.9=false, 0.75=true, 0.95=false}</td>
+      <td>{0.5=false, 0.9=true, 0.75=true, 0.95=true}</td>
+      <td>{0.5=false, 0.9=false, 0.75=true, 0.95=false}</td>
+      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
+      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
+      <td>{0.5=false, 0.9=true, 0.75=true, 0.95=false}</td>
+      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
+      <td>{0.5=false, 0.9=true, 0.75=true, 0.95=false}</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=false}</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=false}</td>
+      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=false}</td>
+      <td>{0.5=true, 0.9=true, 0.75=false, 0.95=true}</td>
+      <td>17</td>
+      <td>17</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>9</th>
       <td>2001</td>
       <td>False</td>
       <td>Beijing</td>
@@ -15409,6 +15856,11 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
       <td>-0.32</td>
       <td>0.436681</td>
       <td>0.787402</td>
+      <td>0.46406</td>
+      <td>0.94521</td>
+      <td>2.5564</td>
+      <td>1.15999</td>
+      <td>1.16092</td>
       <td>5060368</td>
       <td>5131606</td>
       <td>24589</td>
@@ -15459,354 +15911,6 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
       <td>2</td>
       <td>1</td>
     </tr>
-    <tr>
-      <th>6</th>
-      <td>2001</td>
-      <td>False</td>
-      <td>Beijing</td>
-      <td>Beijing</td>
-      <td>1101</td>
-      <td>1</td>
-      <td>1</td>
-      <td>26</td>
-      <td>Raw Chemical Materials</td>
-      <td>ABOVE</td>
-      <td>ABOVE</td>
-      <td>ABOVE</td>
-      <td>ABOVE</td>
-      <td>ABOVE</td>
-      <td>BELOW</td>
-      <td>ABOVE</td>
-      <td>ABOVE</td>
-      <td>ABOVE</td>
-      <td>ABOVE</td>
-      <td>ABOVE</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>ABOVE</td>
-      <td>2733761</td>
-      <td>0.25209</td>
-      <td>0.381358</td>
-      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=true}</td>
-      <td>ABOVE</td>
-      <td>-0.002122</td>
-      <td>True</td>
-      <td>3.813583</td>
-      <td>8.548547</td>
-      <td>-0.23</td>
-      <td>0.436681</td>
-      <td>0.787402</td>
-      <td>10844266</td>
-      <td>10436195</td>
-      <td>33701</td>
-      <td>3485269</td>
-      <td>125776807</td>
-      <td>334013273</td>
-      <td>318583637</td>
-      <td>586191684</td>
-      <td>319179583</td>
-      <td>23859328</td>
-      <td>0.58484</td>
-      <td>0.61168</td>
-      <td>0.54713</td>
-      <td>0.56571</td>
-      <td>0.53850</td>
-      <td>0.54450</td>
-      <td>0.58378</td>
-      <td>0.07475</td>
-      <td>0.06693</td>
-      <td>0.04070</td>
-      <td>0.03607</td>
-      <td>0.03847</td>
-      <td>0.02952</td>
-      <td>Coastal</td>
-      <td>Eastern</td>
-      <td>No</td>
-      <td>False</td>
-      <td>False</td>
-      <td>False</td>
-      <td>True</td>
-      <td>False</td>
-      <td>False</td>
-      <td>False</td>
-      <td>False</td>
-      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
-      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
-      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
-      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
-      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
-      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=true}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=true, 0.9=false, 0.75=true, 0.95=false}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>14</td>
-      <td>14</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>7</th>
-      <td>2001</td>
-      <td>False</td>
-      <td>Beijing</td>
-      <td>Beijing</td>
-      <td>1101</td>
-      <td>1</td>
-      <td>1</td>
-      <td>41</td>
-      <td>Cultural measurement instruments</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>289672</td>
-      <td>0.00317</td>
-      <td>0.381358</td>
-      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=true}</td>
-      <td>ABOVE</td>
-      <td>-0.002122</td>
-      <td>True</td>
-      <td>3.813583</td>
-      <td>9.477311</td>
-      <td>-1.34</td>
-      <td>0.436681</td>
-      <td>0.787402</td>
-      <td>91290956</td>
-      <td>103707948</td>
-      <td>78576</td>
-      <td>15193076</td>
-      <td>180800345</td>
-      <td>180245091</td>
-      <td>281811549</td>
-      <td>511489606</td>
-      <td>167973998</td>
-      <td>28986117</td>
-      <td>0.81478</td>
-      <td>0.92101</td>
-      <td>0.55188</td>
-      <td>0.78512</td>
-      <td>0.77867</td>
-      <td>0.32840</td>
-      <td>0.55118</td>
-      <td>0.17256</td>
-      <td>0.21219</td>
-      <td>0.05667</td>
-      <td>0.06637</td>
-      <td>0.04804</td>
-      <td>0.06341</td>
-      <td>Coastal</td>
-      <td>Eastern</td>
-      <td>No</td>
-      <td>False</td>
-      <td>False</td>
-      <td>False</td>
-      <td>True</td>
-      <td>False</td>
-      <td>False</td>
-      <td>False</td>
-      <td>False</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
-      <td>{0.5=false, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
-      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>28</td>
-      <td>27</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>8</th>
-      <td>2001</td>
-      <td>False</td>
-      <td>Beijing</td>
-      <td>Beijing</td>
-      <td>1101</td>
-      <td>1</td>
-      <td>1</td>
-      <td>37</td>
-      <td>Transport Equipment</td>
-      <td>ABOVE</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>ABOVE</td>
-      <td>ABOVE</td>
-      <td>ABOVE</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>ABOVE</td>
-      <td>2454721</td>
-      <td>0.18822</td>
-      <td>0.381358</td>
-      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=true}</td>
-      <td>ABOVE</td>
-      <td>-0.002122</td>
-      <td>True</td>
-      <td>3.813583</td>
-      <td>8.484594</td>
-      <td>-0.72</td>
-      <td>0.436681</td>
-      <td>0.787402</td>
-      <td>13041459</td>
-      <td>13303835</td>
-      <td>68031</td>
-      <td>4650812</td>
-      <td>224161783</td>
-      <td>291893067</td>
-      <td>423543515</td>
-      <td>702791164</td>
-      <td>276209818</td>
-      <td>37983313</td>
-      <td>0.65150</td>
-      <td>0.66862</td>
-      <td>0.60363</td>
-      <td>0.68753</td>
-      <td>0.61587</td>
-      <td>0.39302</td>
-      <td>0.60005</td>
-      <td>0.13752</td>
-      <td>0.11085</td>
-      <td>0.05405</td>
-      <td>0.04324</td>
-      <td>0.05431</td>
-      <td>0.04164</td>
-      <td>Coastal</td>
-      <td>Eastern</td>
-      <td>No</td>
-      <td>False</td>
-      <td>False</td>
-      <td>False</td>
-      <td>True</td>
-      <td>False</td>
-      <td>False</td>
-      <td>False</td>
-      <td>False</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
-      <td>{0.5=false, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
-      <td>{0.5=false, 0.9=true, 0.75=false, 0.95=true}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>25</td>
-      <td>25</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>9</th>
-      <td>2001</td>
-      <td>False</td>
-      <td>Beijing</td>
-      <td>Beijing</td>
-      <td>1101</td>
-      <td>1</td>
-      <td>1</td>
-      <td>33</td>
-      <td>Smelting Non-ferrous Metals</td>
-      <td>ABOVE</td>
-      <td>ABOVE</td>
-      <td>ABOVE</td>
-      <td>ABOVE</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>ABOVE</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>BELOW</td>
-      <td>85792</td>
-      <td>0.12195</td>
-      <td>0.381358</td>
-      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=true}</td>
-      <td>ABOVE</td>
-      <td>-0.002122</td>
-      <td>True</td>
-      <td>3.813583</td>
-      <td>8.606362</td>
-      <td>-0.10</td>
-      <td>0.436681</td>
-      <td>0.787402</td>
-      <td>703496</td>
-      <td>759271</td>
-      <td>2513</td>
-      <td>632670</td>
-      <td>56202617</td>
-      <td>129402239</td>
-      <td>129326095</td>
-      <td>224800175</td>
-      <td>123730847</td>
-      <td>10403520</td>
-      <td>0.61597</td>
-      <td>0.64779</td>
-      <td>0.57632</td>
-      <td>0.62120</td>
-      <td>0.58535</td>
-      <td>0.55040</td>
-      <td>0.57586</td>
-      <td>0.08408</td>
-      <td>0.07535</td>
-      <td>0.04628</td>
-      <td>0.04369</td>
-      <td>0.04097</td>
-      <td>0.03704</td>
-      <td>Coastal</td>
-      <td>Eastern</td>
-      <td>No</td>
-      <td>False</td>
-      <td>False</td>
-      <td>False</td>
-      <td>True</td>
-      <td>False</td>
-      <td>False</td>
-      <td>False</td>
-      <td>False</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=false, 0.9=false, 0.75=false, 0.95=false}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=false, 0.9=false, 0.75=true, 0.95=false}</td>
-      <td>{0.5=true, 0.9=false, 0.75=false, 0.95=false}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=false}</td>
-      <td>{0.5=true, 0.9=false, 0.75=false, 0.95=false}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=false}</td>
-      <td>{0.5=true, 0.9=false, 0.75=false, 0.95=false}</td>
-      <td>{0.5=true, 0.9=true, 0.75=true, 0.95=true}</td>
-      <td>{0.5=true, 0.9=false, 0.75=false, 0.95=true}</td>
-      <td>{0.5=true, 0.9=false, 0.75=true, 0.95=false}</td>
-      <td>21</td>
-      <td>21</td>
-      <td>1</td>
-    </tr>
   </tbody>
 </table>
 </div>
@@ -15835,7 +15939,7 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[6]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[8]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">s3_output</span> <span class="o">=</span> <span class="s1">&#39;DATA/ENVIRONMENT/CHINA/FYP/FINANCIAL_CONTRAINT/PAPER_FYP_FINANCE_POL/BASELINE/INDUSTRY&#39;</span>
@@ -15856,7 +15960,7 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[7]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[31]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="k">try</span><span class="p">:</span>
@@ -15886,7 +15990,7 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
 
 
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain">
-<pre>{&#39;ResponseMetadata&#39;: {&#39;RequestId&#39;: &#39;122eb735-2127-4f36-b3a2-9eb39bb49e48&#39;, &#39;HTTPStatusCode&#39;: 200, &#39;HTTPHeaders&#39;: {&#39;date&#39;: &#39;Wed, 24 Mar 2021 13:47:56 GMT&#39;, &#39;content-type&#39;: &#39;application/x-amz-json-1.1&#39;, &#39;content-length&#39;: &#39;2&#39;, &#39;connection&#39;: &#39;keep-alive&#39;, &#39;x-amzn-requestid&#39;: &#39;122eb735-2127-4f36-b3a2-9eb39bb49e48&#39;}, &#39;RetryAttempts&#39;: 0}}
+<pre>{&#39;ResponseMetadata&#39;: {&#39;RequestId&#39;: &#39;18f10a06-fa4b-4e04-aac0-02c79bf1b961&#39;, &#39;HTTPStatusCode&#39;: 200, &#39;HTTPHeaders&#39;: {&#39;date&#39;: &#39;Sat, 10 Apr 2021 08:58:12 GMT&#39;, &#39;content-type&#39;: &#39;application/x-amz-json-1.1&#39;, &#39;content-length&#39;: &#39;2&#39;, &#39;connection&#39;: &#39;keep-alive&#39;, &#39;x-amzn-requestid&#39;: &#39;18f10a06-fa4b-4e04-aac0-02c79bf1b961&#39;}, &#39;RetryAttempts&#39;: 0}}
 </pre>
 </div>
 </div>
@@ -15904,7 +16008,7 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[8]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[32]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">s3</span><span class="o">.</span><span class="n">remove_all_bucket</span><span class="p">(</span><span class="n">path_remove</span> <span class="o">=</span> <span class="n">s3_output</span><span class="p">)</span>
@@ -15923,7 +16027,7 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
 <div class="jp-OutputArea-child">
 
     
-    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[8]:</div>
+    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[32]:</div>
 
 
 
@@ -15941,7 +16045,7 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[9]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[33]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="o">%%time</span>
@@ -16042,6 +16146,11 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
 <span class="s2">  credit_constraint,</span>
 <span class="s2">  1/supply_all_credit as supply_all_credit,</span>
 <span class="s2">  1/supply_long_term_credit as supply_long_term_credit,</span>
+<span class="s2">  share_big_bank_loan,</span>
+<span class="s2">  share_big_loan,</span>
+<span class="s2">  credit_supply,</span>
+<span class="s2">  credit_supply_long_term,</span>
+<span class="s2">  credit_supply_short_term,</span>
 <span class="s2">  output,</span>
 <span class="s2">  sales,</span>
 <span class="s2">  employment,</span>
@@ -16309,6 +16418,41 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
 <span class="s2">FROM &quot;policy&quot;.&quot;china_spatial_relocation&quot;</span>
 <span class="s2">    ) as relocation</span>
 <span class="s2">    ON aggregate_pol.geocode4_corr = relocation.geocode4_corr</span>
+<span class="s2">LEFT JOIN (</span>
+<span class="s2">    SELECT </span>
+<span class="s2">      province_loan_and_credit.year, </span>
+<span class="s2">      province_loan_and_credit.province_en, </span>
+<span class="s2">      CAST(</span>
+<span class="s2">        total_loan_big_four AS DECIMAL(16, 5)</span>
+<span class="s2">      )/ CAST(</span>
+<span class="s2">        total_bank_loan AS DECIMAL(16, 5)</span>
+<span class="s2">      ) AS share_big_bank_loan, </span>
+<span class="s2">      CAST(</span>
+<span class="s2">        total_loan_big_four AS DECIMAL(16, 5)</span>
+<span class="s2">      )/ CAST(</span>
+<span class="s2">        total_loan AS DECIMAL(16, 5)</span>
+<span class="s2">      ) AS share_big_loan, </span>
+<span class="s2">      CAST(</span>
+<span class="s2">        total_bank_loan AS DECIMAL(16, 5)</span>
+<span class="s2">      )/ CAST(</span>
+<span class="s2">        total_gdp AS DECIMAL(16, 5)</span>
+<span class="s2">      ) AS credit_supply, </span>
+<span class="s2">      CAST(</span>
+<span class="s2">        total_long_term_loan AS DECIMAL(16, 5)</span>
+<span class="s2">      )/ CAST(</span>
+<span class="s2">        total_gdp AS DECIMAL(16, 5)</span>
+<span class="s2">      ) AS credit_supply_long_term, </span>
+<span class="s2">      CAST(</span>
+<span class="s2">        total_short_term AS DECIMAL(16, 5)</span>
+<span class="s2">      )/ CAST(</span>
+<span class="s2">        total_gdp AS DECIMAL(16, 5)</span>
+<span class="s2">      ) AS credit_supply_short_term </span>
+<span class="s2">    FROM </span>
+<span class="s2">      almanac_bank_china.bank_socb_loan </span>
+<span class="s2">      RIGHT JOIN almanac_bank_china.province_loan_and_credit ON bank_socb_loan.year = province_loan_and_credit.year </span>
+<span class="s2">      AND bank_socb_loan.province_en = province_loan_and_credit.province_en</span>
+<span class="s2">  ) as credit ON aggregate_pol.year = credit.year </span>
+<span class="s2">  AND aggregate_pol.province_en = credit.province_en </span>
 <span class="s2">WHERE </span>
 <span class="s2">  tso2 &gt; 0 </span>
 <span class="s2">  AND output &gt; 0 </span>
@@ -16343,8 +16487,8 @@ Follow this notebook to construct the table <a href="https://github.com/thomaspe
 
 
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain">
-<pre>CPU times: user 1.1 s, sys: 28.7 ms, total: 1.13 s
-Wall time: 16.3 s
+<pre>CPU times: user 1.3 s, sys: 14 ms, total: 1.31 s
+Wall time: 16.1 s
 </pre>
 </div>
 </div>
@@ -16352,16 +16496,16 @@ Wall time: 16.3 s
 <div class="jp-OutputArea-child">
 
     
-    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[9]:</div>
+    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[33]:</div>
 
 
 
 
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain">
 <pre>{&#39;Results&#39;: {&#39;State&#39;: &#39;SUCCEEDED&#39;,
-  &#39;SubmissionDateTime&#39;: datetime.datetime(2021, 3, 24, 13, 48, 11, 685000, tzinfo=tzlocal()),
-  &#39;CompletionDateTime&#39;: datetime.datetime(2021, 3, 24, 13, 48, 25, 618000, tzinfo=tzlocal())},
- &#39;QueryID&#39;: &#39;4d84b2c7-a5d8-4c9a-938b-12be84176b90&#39;}</pre>
+  &#39;SubmissionDateTime&#39;: datetime.datetime(2021, 4, 10, 8, 58, 15, 77000, tzinfo=tzlocal()),
+  &#39;CompletionDateTime&#39;: datetime.datetime(2021, 4, 10, 8, 58, 30, 386000, tzinfo=tzlocal())},
+ &#39;QueryID&#39;: &#39;3d8c8fe6-a67b-4426-8c52-a0801e869bbd&#39;}</pre>
 </div>
 
 </div>
@@ -16373,7 +16517,7 @@ Wall time: 16.3 s
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[10]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[34]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">query_count</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
@@ -16402,7 +16546,7 @@ Wall time: 16.3 s
 <div class="jp-OutputArea-child">
 
     
-    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[10]:</div>
+    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[34]:</div>
 
 
 
@@ -16476,7 +16620,7 @@ Wall time: 16.3 s
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[11]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[36]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">glue</span><span class="o">.</span><span class="n">get_table_information</span><span class="p">(</span>
@@ -16497,7 +16641,7 @@ Wall time: 16.3 s
 <div class="jp-OutputArea-child">
 
     
-    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[11]:</div>
+    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[36]:</div>
 
 
 
@@ -16540,6 +16684,11 @@ Wall time: 16.3 s
  {&#39;Name&#39;: &#39;credit_constraint&#39;, &#39;Type&#39;: &#39;float&#39;, &#39;Comment&#39;: &#39;&#39;},
  {&#39;Name&#39;: &#39;supply_all_credit&#39;, &#39;Type&#39;: &#39;double&#39;, &#39;Comment&#39;: &#39;&#39;},
  {&#39;Name&#39;: &#39;supply_long_term_credit&#39;, &#39;Type&#39;: &#39;float&#39;, &#39;Comment&#39;: &#39;&#39;},
+ {&#39;Name&#39;: &#39;share_big_bank_loan&#39;, &#39;Type&#39;: &#39;decimal(21,5)&#39;, &#39;Comment&#39;: &#39;&#39;},
+ {&#39;Name&#39;: &#39;share_big_loan&#39;, &#39;Type&#39;: &#39;decimal(21,5)&#39;, &#39;Comment&#39;: &#39;&#39;},
+ {&#39;Name&#39;: &#39;credit_supply&#39;, &#39;Type&#39;: &#39;decimal(21,5)&#39;, &#39;Comment&#39;: &#39;&#39;},
+ {&#39;Name&#39;: &#39;credit_supply_long_term&#39;, &#39;Type&#39;: &#39;decimal(21,5)&#39;, &#39;Comment&#39;: &#39;&#39;},
+ {&#39;Name&#39;: &#39;credit_supply_short_term&#39;, &#39;Type&#39;: &#39;decimal(21,5)&#39;, &#39;Comment&#39;: &#39;&#39;},
  {&#39;Name&#39;: &#39;output&#39;, &#39;Type&#39;: &#39;bigint&#39;, &#39;Comment&#39;: &#39;&#39;},
  {&#39;Name&#39;: &#39;sales&#39;, &#39;Type&#39;: &#39;bigint&#39;, &#39;Comment&#39;: &#39;&#39;},
  {&#39;Name&#39;: &#39;employment&#39;, &#39;Type&#39;: &#39;bigint&#39;, &#39;Comment&#39;: &#39;&#39;},
@@ -16618,7 +16767,7 @@ Wall time: 16.3 s
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[12]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[37]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">schema</span> <span class="o">=</span> <span class="p">[{</span><span class="s1">&#39;Name&#39;</span><span class="p">:</span> <span class="s1">&#39;year&#39;</span><span class="p">,</span> <span class="s1">&#39;Type&#39;</span><span class="p">:</span> <span class="s1">&#39;string&#39;</span><span class="p">,</span> <span class="s1">&#39;Comment&#39;</span><span class="p">:</span> <span class="s1">&#39;year from 2001 to 2007&#39;</span><span class="p">},</span>
@@ -16665,6 +16814,11 @@ Wall time: 16.3 s
         <span class="s1">&#39;Comment&#39;</span><span class="p">:</span> <span class="s1">&#39;province external supply of credit&#39;</span><span class="p">},</span>
     <span class="p">{</span><span class="s1">&#39;Name&#39;</span><span class="p">:</span> <span class="s1">&#39;supply_long_term_credit&#39;</span><span class="p">,</span> <span class="s1">&#39;Type&#39;</span><span class="p">:</span> <span class="s1">&#39;float&#39;</span><span class="p">,</span>
         <span class="s1">&#39;Comment&#39;</span><span class="p">:</span> <span class="s1">&#39;province external supply of long term credit&#39;</span><span class="p">},</span>
+ <span class="p">{</span><span class="s1">&#39;Name&#39;</span><span class="p">:</span> <span class="s1">&#39;share_big_bank_loan&#39;</span><span class="p">,</span> <span class="s1">&#39;Type&#39;</span><span class="p">:</span> <span class="s1">&#39;decimal(21,5)&#39;</span><span class="p">,</span> <span class="s1">&#39;Comment&#39;</span><span class="p">:</span> <span class="s1">&#39;share four State-owned commercial banks in total bank lending&#39;</span><span class="p">},</span>
+ <span class="p">{</span><span class="s1">&#39;Name&#39;</span><span class="p">:</span> <span class="s1">&#39;share_big_loan&#39;</span><span class="p">,</span> <span class="s1">&#39;Type&#39;</span><span class="p">:</span> <span class="s1">&#39;decimal(21,5)&#39;</span><span class="p">,</span> <span class="s1">&#39;Comment&#39;</span><span class="p">:</span> <span class="s1">&#39;share four State-owned commercial banks in total lending&#39;</span><span class="p">},</span>
+ <span class="p">{</span><span class="s1">&#39;Name&#39;</span><span class="p">:</span> <span class="s1">&#39;credit_supply&#39;</span><span class="p">,</span> <span class="s1">&#39;Type&#39;</span><span class="p">:</span> <span class="s1">&#39;decimal(21,5)&#39;</span><span class="p">,</span> <span class="s1">&#39;Comment&#39;</span><span class="p">:</span> <span class="s1">&#39;total bank lending normalised by gdp&#39;</span><span class="p">},</span>
+ <span class="p">{</span><span class="s1">&#39;Name&#39;</span><span class="p">:</span> <span class="s1">&#39;credit_supply_long_term&#39;</span><span class="p">,</span> <span class="s1">&#39;Type&#39;</span><span class="p">:</span> <span class="s1">&#39;decimal(21,5)&#39;</span><span class="p">,</span> <span class="s1">&#39;Comment&#39;</span><span class="p">:</span> <span class="s1">&#39;total long term bank lending normalised by gdp&#39;</span><span class="p">},</span>
+ <span class="p">{</span><span class="s1">&#39;Name&#39;</span><span class="p">:</span> <span class="s1">&#39;credit_supply_short_term&#39;</span><span class="p">,</span> <span class="s1">&#39;Type&#39;</span><span class="p">:</span> <span class="s1">&#39;decimal(21,5)&#39;</span><span class="p">,</span> <span class="s1">&#39;Comment&#39;</span><span class="p">:</span> <span class="s1">&#39;total short term bank lending normalised by gdp&#39;</span><span class="p">},</span>
  <span class="p">{</span><span class="s1">&#39;Name&#39;</span><span class="p">:</span> <span class="s1">&#39;output&#39;</span><span class="p">,</span> <span class="s1">&#39;Type&#39;</span><span class="p">:</span> <span class="s1">&#39;bigint&#39;</span><span class="p">,</span> <span class="s1">&#39;Comment&#39;</span><span class="p">:</span> <span class="s1">&#39;Output&#39;</span><span class="p">},</span>
  <span class="p">{</span><span class="s1">&#39;Name&#39;</span><span class="p">:</span> <span class="s1">&#39;sales&#39;</span><span class="p">,</span> <span class="s1">&#39;Type&#39;</span><span class="p">:</span> <span class="s1">&#39;bigint&#39;</span><span class="p">,</span> <span class="s1">&#39;Comment&#39;</span><span class="p">:</span> <span class="s1">&#39;Sales&#39;</span><span class="p">},</span>
  <span class="p">{</span><span class="s1">&#39;Name&#39;</span><span class="p">:</span> <span class="s1">&#39;employment&#39;</span><span class="p">,</span> <span class="s1">&#39;Type&#39;</span><span class="p">:</span> <span class="s1">&#39;bigint&#39;</span><span class="p">,</span> <span class="s1">&#39;Comment&#39;</span><span class="p">:</span> <span class="s1">&#39;Employemnt&#39;</span><span class="p">},</span>
@@ -16785,7 +16939,7 @@ Wall time: 16.3 s
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[13]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[38]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
@@ -16819,7 +16973,7 @@ Wall time: 16.3 s
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[14]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[39]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">name_json</span> <span class="o">=</span> <span class="s1">&#39;parameters_ETL_pollution_credit_constraint.json&#39;</span>
@@ -16834,7 +16988,7 @@ Wall time: 16.3 s
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[15]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[40]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path_json</span><span class="p">)</span> <span class="k">as</span> <span class="n">json_file</span><span class="p">:</span>
@@ -16849,7 +17003,7 @@ Wall time: 16.3 s
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[16]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[41]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">partition_keys</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;province_en&quot;</span><span class="p">,</span> <span class="s2">&quot;geocode4_corr&quot;</span><span class="p">,</span><span class="s2">&quot;ind2&quot;</span><span class="p">,</span> <span class="s2">&quot;year&quot;</span> <span class="p">]</span>
@@ -16866,7 +17020,7 @@ Wall time: 16.3 s
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[17]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[42]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">github_url</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
@@ -16896,7 +17050,7 @@ Wall time: 16.3 s
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[18]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[43]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">list_input</span> <span class="o">=</span> <span class="p">[]</span>
@@ -16916,7 +17070,7 @@ Wall time: 16.3 s
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[19]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[44]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">json_etl</span> <span class="o">=</span> <span class="p">{</span>
@@ -16952,7 +17106,7 @@ Wall time: 16.3 s
 <div class="jp-OutputArea-child">
 
     
-    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[19]:</div>
+    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[44]:</div>
 
 
 
@@ -16977,7 +17131,9 @@ Wall time: 16.3 s
   &#39;asif_industry_characteristics_ownership&#39;,
   &#39;asif_city_characteristics_ownership&#39;,
   &#39;province_credit_constraint&#39;,
-  &#39;china_spatial_relocation&#39;],
+  &#39;china_spatial_relocation&#39;,
+  &#39;bank_socb_loan&#39;,
+  &#39;province_loan_and_credit&#39;],
  &#39;target_S3URI&#39;: &#39;s3://datalake-datascience/DATA/ENVIRONMENT/CHINA/FYP/FINANCIAL_CONTRAINT/PAPER_FYP_FINANCE_POL/BASELINE/INDUSTRY&#39;,
  &#39;from_athena&#39;: &#39;True&#39;,
  &#39;filename&#39;: &#39;00_credit_constraint_industry.ipynb&#39;,
@@ -17001,7 +17157,7 @@ Wall time: 16.3 s
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[20]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[45]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">index_to_remove</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span>
@@ -17025,7 +17181,7 @@ Wall time: 16.3 s
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[21]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[46]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Currently, the ETL has </span><span class="si">{}</span><span class="s2"> tables&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;TABLES&#39;</span><span class="p">][</span><span class="s1">&#39;TRANSFORMATION&#39;</span><span class="p">][</span><span class="s1">&#39;STEPS&#39;</span><span class="p">])))</span>
@@ -17066,7 +17222,7 @@ Wall time: 16.3 s
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[22]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[47]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path_json</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">json_file</span><span class="p">:</span>
@@ -17108,7 +17264,7 @@ Wall time: 16.3 s
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[23]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[48]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">glue</span><span class="o">.</span><span class="n">update_schema_table</span><span class="p">(</span>
@@ -17130,19 +17286,19 @@ Wall time: 16.3 s
 <div class="jp-OutputArea-child">
 
     
-    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[23]:</div>
+    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[48]:</div>
 
 
 
 
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain">
-<pre>{&#39;ResponseMetadata&#39;: {&#39;RequestId&#39;: &#39;ffeca38e-4fd6-46f0-a939-218e84fea8a4&#39;,
+<pre>{&#39;ResponseMetadata&#39;: {&#39;RequestId&#39;: &#39;47ba1217-8145-4352-9a4d-6731e4e30bbe&#39;,
   &#39;HTTPStatusCode&#39;: 200,
-  &#39;HTTPHeaders&#39;: {&#39;date&#39;: &#39;Wed, 24 Mar 2021 13:48:52 GMT&#39;,
+  &#39;HTTPHeaders&#39;: {&#39;date&#39;: &#39;Sat, 10 Apr 2021 08:59:15 GMT&#39;,
    &#39;content-type&#39;: &#39;application/x-amz-json-1.1&#39;,
    &#39;content-length&#39;: &#39;2&#39;,
    &#39;connection&#39;: &#39;keep-alive&#39;,
-   &#39;x-amzn-requestid&#39;: &#39;ffeca38e-4fd6-46f0-a939-218e84fea8a4&#39;},
+   &#39;x-amzn-requestid&#39;: &#39;47ba1217-8145-4352-9a4d-6731e4e30bbe&#39;},
   &#39;RetryAttempts&#39;: 0}}</pre>
 </div>
 
@@ -17162,7 +17318,7 @@ Wall time: 16.3 s
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[24]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[29]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1">#partition_keys = []</span>
@@ -17179,7 +17335,7 @@ Wall time: 16.3 s
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[25]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[35]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1">### COUNT DUPLICATES</span>
@@ -17262,7 +17418,7 @@ Wall time: 16.3 s
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[26]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[49]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1">#table = &#39;XX&#39;</span>
@@ -17280,7 +17436,7 @@ Wall time: 16.3 s
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[27]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[50]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">date</span>
@@ -17295,7 +17451,7 @@ Wall time: 16.3 s
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[28]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[51]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">table_top</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;ANALYSIS&quot;</span><span class="p">][</span><span class="s2">&quot;COUNT_MISSING&quot;</span><span class="p">][</span><span class="s2">&quot;top&quot;</span><span class="p">]</span>
@@ -17350,454 +17506,487 @@ Wall time: 16.3 s
 
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output " data-mime-type="text/html">
 <style  type="text/css" >
-#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow0_col1{
+#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row0_col1{
             width:  10em;
              height:  80%;
             background:  linear-gradient(90deg,#d65f5f 100.0%, transparent 100.0%);
-        }#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow1_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow2_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow3_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow4_col1{
+        }#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row1_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row2_col1{
+            width:  10em;
+             height:  80%;
+            background:  linear-gradient(90deg,#d65f5f 49.4%, transparent 49.4%);
+        }#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row3_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row4_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row5_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row6_col1{
             width:  10em;
              height:  80%;
             background:  linear-gradient(90deg,#d65f5f 22.9%, transparent 22.9%);
-        }#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow5_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow6_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow7_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow8_col1{
+        }#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row7_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row8_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row9_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row10_col1{
             width:  10em;
              height:  80%;
             background:  linear-gradient(90deg,#d65f5f 14.0%, transparent 14.0%);
-        }#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow9_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow10_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow11_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow12_col1{
+        }#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row11_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row12_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row13_col1{
+            width:  10em;
+             height:  80%;
+            background:  linear-gradient(90deg,#d65f5f 7.8%, transparent 7.8%);
+        }#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row14_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row15_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row16_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row17_col1{
             width:  10em;
              height:  80%;
             background:  linear-gradient(90deg,#d65f5f 0.3%, transparent 0.3%);
-        }#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow13_col1{
+        }#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row18_col1{
             width:  10em;
              height:  80%;
             background:  linear-gradient(90deg,#d65f5f 0.0%, transparent 0.0%);
-        }#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow14_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow15_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow16_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow17_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow18_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow19_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow20_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow21_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow22_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow23_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow24_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow25_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow26_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow27_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow28_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow29_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow30_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow31_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow32_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow33_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow34_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow35_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow36_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow37_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow38_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow39_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow40_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow41_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow42_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow43_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow44_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow45_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow46_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow47_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow48_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow49_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow50_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow51_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow52_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow53_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow54_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow55_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow56_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow57_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow58_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow59_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow60_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow61_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow62_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow63_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow64_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow65_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow66_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow67_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow68_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow69_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow70_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow71_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow72_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow73_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow74_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow75_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow76_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow77_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow78_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow79_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow80_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow81_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow82_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow83_col1,#T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow84_col1{
+        }#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row19_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row20_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row21_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row22_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row23_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row24_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row25_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row26_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row27_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row28_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row29_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row30_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row31_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row32_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row33_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row34_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row35_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row36_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row37_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row38_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row39_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row40_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row41_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row42_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row43_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row44_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row45_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row46_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row47_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row48_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row49_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row50_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row51_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row52_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row53_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row54_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row55_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row56_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row57_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row58_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row59_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row60_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row61_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row62_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row63_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row64_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row65_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row66_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row67_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row68_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row69_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row70_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row71_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row72_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row73_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row74_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row75_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row76_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row77_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row78_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row79_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row80_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row81_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row82_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row83_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row84_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row85_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row86_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row87_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row88_col1,#T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row89_col1{
             width:  10em;
              height:  80%;
-        }</style><table id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0ca" ><thead>    <tr>        <th class="blank level0" ></th>        <th class="col_heading level0 col0" >total_missing</th>        <th class="col_heading level0 col1" >total_missing_pct</th>    </tr></thead><tbody>
+        }</style><table id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081" ><thead>    <tr>        <th class="blank level0" ></th>        <th class="col_heading level0 col0" >total_missing</th>        <th class="col_heading level0 col1" >total_missing_pct</th>    </tr></thead><tbody>
                 <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row0" class="row_heading level0 row0" >nb_obs</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow0_col0" class="data row0 col0" >30693</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow0_col1" class="data row0 col1" >100.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row0" class="row_heading level0 row0" >nb_obs</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row0_col0" class="data row0 col0" >30693</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row0_col1" class="data row0 col1" >100.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row1" class="row_heading level0 row1" >dominated_capital_for_i</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow1_col0" class="data row1 col0" >7032</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow1_col1" class="data row1 col1" >22.91%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row1" class="row_heading level0 row1" >share_big_bank_loan</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row1_col0" class="data row1 col0" >15160</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row1_col1" class="data row1 col1" >49.39%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row2" class="row_heading level0 row2" >dominated_sales_for_i</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow2_col0" class="data row2 col0" >7032</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow2_col1" class="data row2 col1" >22.91%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row2" class="row_heading level0 row2" >share_big_loan</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row2_col0" class="data row2 col0" >15160</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row2_col1" class="data row2 col1" >49.39%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row3" class="row_heading level0 row3" >dominated_employment_for_i</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow3_col0" class="data row3 col0" >7032</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow3_col1" class="data row3 col1" >22.91%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row3" class="row_heading level0 row3" >dominated_capital_for_i</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row3_col0" class="data row3 col0" >7032</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row3_col1" class="data row3 col1" >22.91%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row4" class="row_heading level0 row4" >dominated_output_for_i</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow4_col0" class="data row4 col0" >7032</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow4_col1" class="data row4 col1" >22.91%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row4" class="row_heading level0 row4" >dominated_sales_for_i</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row4_col0" class="data row4 col0" >7032</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row4_col1" class="data row4 col1" >22.91%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row5" class="row_heading level0 row5" >dominated_capital_soe_i</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow5_col0" class="data row5 col0" >4283</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow5_col1" class="data row5 col1" >13.95%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row5" class="row_heading level0 row5" >dominated_employment_for_i</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row5_col0" class="data row5 col0" >7032</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row5_col1" class="data row5 col1" >22.91%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row6" class="row_heading level0 row6" >dominated_sales_soe_i</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow6_col0" class="data row6 col0" >4283</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow6_col1" class="data row6 col1" >13.95%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row6" class="row_heading level0 row6" >dominated_output_for_i</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row6_col0" class="data row6 col0" >7032</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row6_col1" class="data row6 col1" >22.91%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row7" class="row_heading level0 row7" >dominated_employment_soe_i</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow7_col0" class="data row7 col0" >4283</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow7_col1" class="data row7 col1" >13.95%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row7" class="row_heading level0 row7" >dominated_employment_soe_i</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row7_col0" class="data row7 col0" >4283</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row7_col1" class="data row7 col1" >13.95%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row8" class="row_heading level0 row8" >dominated_output_soe_i</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow8_col0" class="data row8 col0" >4283</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow8_col1" class="data row8 col1" >13.95%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row8" class="row_heading level0 row8" >dominated_output_soe_i</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row8_col0" class="data row8 col0" >4283</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row8_col1" class="data row8 col1" >13.95%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row9" class="row_heading level0 row9" >dominated_capital_for_c</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow9_col0" class="data row9 col0" >90</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow9_col1" class="data row9 col1" >0.29%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row9" class="row_heading level0 row9" >dominated_sales_soe_i</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row9_col0" class="data row9 col0" >4283</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row9_col1" class="data row9 col1" >13.95%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row10" class="row_heading level0 row10" >dominated_output_for_c</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow10_col0" class="data row10 col0" >90</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow10_col1" class="data row10 col1" >0.29%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row10" class="row_heading level0 row10" >dominated_capital_soe_i</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row10_col0" class="data row10 col0" >4283</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row10_col1" class="data row10 col1" >13.95%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row11" class="row_heading level0 row11" >dominated_employment_for_c</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow11_col0" class="data row11 col0" >90</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow11_col1" class="data row11 col1" >0.29%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row11" class="row_heading level0 row11" >credit_supply</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row11_col0" class="data row11 col0" >2383</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row11_col1" class="data row11 col1" >7.76%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row12" class="row_heading level0 row12" >dominated_sales_for_c</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow12_col0" class="data row12 col0" >90</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow12_col1" class="data row12 col1" >0.29%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row12" class="row_heading level0 row12" >credit_supply_long_term</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row12_col0" class="data row12 col0" >2383</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row12_col1" class="data row12 col1" >7.76%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row13" class="row_heading level0 row13" >avg_ij_o_city_mandate</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow13_col0" class="data row13 col0" >7</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow13_col1" class="data row13 col1" >0.02%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row13" class="row_heading level0 row13" >credit_supply_short_term</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row13_col0" class="data row13 col0" >2383</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row13_col1" class="data row13 col1" >7.76%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row14" class="row_heading level0 row14" >sales_tot_asset</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow14_col0" class="data row14 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow14_col1" class="data row14 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row14" class="row_heading level0 row14" >dominated_employment_for_c</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row14_col0" class="data row14 col0" >90</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row14_col1" class="data row14 col1" >0.29%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row15" class="row_heading level0 row15" >lag_sales_tot_asset</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow15_col0" class="data row15 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow15_col1" class="data row15 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row15" class="row_heading level0 row15" >dominated_output_for_c</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row15_col0" class="data row15 col0" >90</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row15_col1" class="data row15 col1" >0.29%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row16" class="row_heading level0 row16" >return_to_sale</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow16_col0" class="data row16 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow16_col1" class="data row16 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row16" class="row_heading level0 row16" >dominated_capital_for_c</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row16_col0" class="data row16 col0" >90</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row16_col1" class="data row16 col1" >0.29%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row17" class="row_heading level0 row17" >lag_current_ratio</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow17_col0" class="data row17 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow17_col1" class="data row17 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row17" class="row_heading level0 row17" >dominated_sales_for_c</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row17_col0" class="data row17 col0" >90</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row17_col1" class="data row17 col1" >0.29%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row18" class="row_heading level0 row18" >current_ratio</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow18_col0" class="data row18 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow18_col1" class="data row18 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row18" class="row_heading level0 row18" >avg_ij_o_city_mandate</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row18_col0" class="data row18 col0" >7</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row18_col1" class="data row18 col1" >0.02%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row19" class="row_heading level0 row19" >cashflow</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow19_col0" class="data row19 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow19_col1" class="data row19 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row19" class="row_heading level0 row19" >cashflow_tot_asset</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row19_col0" class="data row19 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row19_col1" class="data row19 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row20" class="row_heading level0 row20" >asset_tangibility_tot_asset</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow20_col0" class="data row20 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow20_col1" class="data row20 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row20" class="row_heading level0 row20" >sales_tot_asset</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row20_col0" class="data row20 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row20_col1" class="data row20 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row21" class="row_heading level0 row21" >lag_liabilities_tot_asset</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow21_col0" class="data row21 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow21_col1" class="data row21 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row21" class="row_heading level0 row21" >liabilities_tot_asset</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row21_col0" class="data row21 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row21_col1" class="data row21 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row22" class="row_heading level0 row22" >cashflow_to_tangible</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow22_col0" class="data row22 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow22_col1" class="data row22 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row22" class="row_heading level0 row22" >lag_current_ratio</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row22_col0" class="data row22 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row22_col1" class="data row22 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row23" class="row_heading level0 row23" >lag_cashflow_to_tangible</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow23_col0" class="data row23 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow23_col1" class="data row23 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row23" class="row_heading level0 row23" >current_ratio</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row23_col0" class="data row23 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row23_col1" class="data row23 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row24" class="row_heading level0 row24" >cashflow_tot_asset</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow24_col0" class="data row24 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow24_col1" class="data row24 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row24" class="row_heading level0 row24" >cashflow</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row24_col0" class="data row24 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row24_col1" class="data row24 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row25" class="row_heading level0 row25" >lag_cashflow_tot_asset</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow25_col0" class="data row25 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow25_col1" class="data row25 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row25" class="row_heading level0 row25" >asset_tangibility_tot_asset</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row25_col0" class="data row25 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row25_col1" class="data row25 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row26" class="row_heading level0 row26" >liabilities_tot_asset</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow26_col0" class="data row26 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow26_col1" class="data row26 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row26" class="row_heading level0 row26" >lag_liabilities_tot_asset</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row26_col0" class="data row26 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row26_col1" class="data row26 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row27" class="row_heading level0 row27" >dominated_sales_soe_c</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow27_col0" class="data row27 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow27_col1" class="data row27 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row27" class="row_heading level0 row27" >cashflow_to_tangible</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row27_col0" class="data row27 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row27_col1" class="data row27 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row28" class="row_heading level0 row28" >lag_return_to_sale</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow28_col0" class="data row28 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow28_col1" class="data row28 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row28" class="row_heading level0 row28" >lag_cashflow_to_tangible</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row28_col0" class="data row28 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row28_col1" class="data row28 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row29" class="row_heading level0 row29" >lower_location</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow29_col0" class="data row29 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow29_col1" class="data row29 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row29" class="row_heading level0 row29" >lag_sales_tot_asset</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row29_col0" class="data row29 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row29_col1" class="data row29 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row30" class="row_heading level0 row30" >larger_location</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow30_col0" class="data row30 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow30_col1" class="data row30 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row30" class="row_heading level0 row30" >coastal</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row30_col0" class="data row30 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row30_col1" class="data row30 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row31" class="row_heading level0 row31" >coastal</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow31_col0" class="data row31 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow31_col1" class="data row31 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row31" class="row_heading level0 row31" >lag_cashflow_tot_asset</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row31_col0" class="data row31 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row31_col1" class="data row31 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row32" class="row_heading level0 row32" >dominated_output_soe_c</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow32_col0" class="data row32 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow32_col1" class="data row32 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row32" class="row_heading level0 row32" >dominated_capital_soe_c</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row32_col0" class="data row32 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row32_col1" class="data row32 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row33" class="row_heading level0 row33" >dominated_employment_soe_c</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow33_col0" class="data row33 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow33_col1" class="data row33 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row33" class="row_heading level0 row33" >fe_t_i</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row33_col0" class="data row33 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row33_col1" class="data row33 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row34" class="row_heading level0 row34" >total_asset</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow34_col0" class="data row34 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow34_col1" class="data row34 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row34" class="row_heading level0 row34" >fe_c_i</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row34_col0" class="data row34 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row34_col1" class="data row34 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row35" class="row_heading level0 row35" >dominated_capital_soe_c</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow35_col0" class="data row35 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow35_col1" class="data row35 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row35" class="row_heading level0 row35" >dominated_capital_i</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row35_col0" class="data row35 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row35_col1" class="data row35 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row36" class="row_heading level0 row36" >dominated_output_i</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow36_col0" class="data row36 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow36_col1" class="data row36 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row36" class="row_heading level0 row36" >dominated_sales_i</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row36_col0" class="data row36 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row36_col1" class="data row36 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row37" class="row_heading level0 row37" >dominated_employ_i</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow37_col0" class="data row37 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow37_col1" class="data row37 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row37" class="row_heading level0 row37" >dominated_employ_i</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row37_col0" class="data row37 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row37_col1" class="data row37 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row38" class="row_heading level0 row38" >dominated_sales_i</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow38_col0" class="data row38 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow38_col1" class="data row38 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row38" class="row_heading level0 row38" >dominated_output_i</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row38_col0" class="data row38 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row38_col1" class="data row38 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row39" class="row_heading level0 row39" >dominated_capital_i</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow39_col0" class="data row39 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow39_col1" class="data row39 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row39" class="row_heading level0 row39" >dominated_sales_soe_c</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row39_col0" class="data row39 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row39_col1" class="data row39 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row40" class="row_heading level0 row40" >fe_c_i</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow40_col0" class="data row40 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow40_col1" class="data row40 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row40" class="row_heading level0 row40" >return_to_sale</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row40_col0" class="data row40 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row40_col1" class="data row40 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row41" class="row_heading level0 row41" >fe_t_i</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow41_col0" class="data row41 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow41_col1" class="data row41 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row41" class="row_heading level0 row41" >dominated_employment_soe_c</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row41_col0" class="data row41 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row41_col1" class="data row41 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row42" class="row_heading level0 row42" >tangible</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow42_col0" class="data row42 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow42_col1" class="data row42 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row42" class="row_heading level0 row42" >dominated_output_soe_c</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row42_col0" class="data row42 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row42_col1" class="data row42 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row43" class="row_heading level0 row43" >total_liabilities</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow43_col0" class="data row43 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow43_col1" class="data row43 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row43" class="row_heading level0 row43" >total_asset</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row43_col0" class="data row43 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row43_col1" class="data row43 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row44" class="row_heading level0 row44" >year</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow44_col0" class="data row44 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow44_col1" class="data row44 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row44" class="row_heading level0 row44" >larger_location</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row44_col0" class="data row44 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row44_col1" class="data row44 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row45" class="row_heading level0 row45" >polluted_d85_cit</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow45_col0" class="data row45 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow45_col1" class="data row45 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row45" class="row_heading level0 row45" >lower_location</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row45_col0" class="data row45 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row45_col1" class="data row45 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row46" class="row_heading level0 row46" >polluted_d75_cit</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow46_col0" class="data row46 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow46_col1" class="data row46 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row46" class="row_heading level0 row46" >lag_return_to_sale</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row46_col0" class="data row46 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row46_col1" class="data row46 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row47" class="row_heading level0 row47" >polluted_d50_cit</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow47_col0" class="data row47 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow47_col1" class="data row47 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row47" class="row_heading level0 row47" >tangible</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row47_col0" class="data row47 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row47_col1" class="data row47 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row48" class="row_heading level0 row48" >polluted_mi</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow48_col0" class="data row48 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow48_col1" class="data row48 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row48" class="row_heading level0 row48" >current_asset</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row48_col0" class="data row48 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row48_col1" class="data row48 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row49" class="row_heading level0 row49" >polluted_d95i</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow49_col0" class="data row49 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow49_col1" class="data row49 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row49" class="row_heading level0 row49" >total_liabilities</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row49_col0" class="data row49 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row49_col1" class="data row49 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row50" class="row_heading level0 row50" >polluted_d90i</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow50_col0" class="data row50 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow50_col1" class="data row50 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row50" class="row_heading level0 row50" >polluted_d85_cit</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row50_col0" class="data row50 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row50_col1" class="data row50 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row51" class="row_heading level0 row51" >polluted_d85i</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow51_col0" class="data row51 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow51_col1" class="data row51 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row51" class="row_heading level0 row51" >polluted_d75_cit</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row51_col0" class="data row51 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row51_col1" class="data row51 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row52" class="row_heading level0 row52" >polluted_d80i</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow52_col0" class="data row52 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow52_col1" class="data row52 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row52" class="row_heading level0 row52" >polluted_d50_cit</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row52_col0" class="data row52 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row52_col1" class="data row52 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row53" class="row_heading level0 row53" >polluted_d75i</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow53_col0" class="data row53 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow53_col1" class="data row53 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row53" class="row_heading level0 row53" >polluted_mi</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row53_col0" class="data row53 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row53_col1" class="data row53 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row54" class="row_heading level0 row54" >polluted_d50i</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow54_col0" class="data row54 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow54_col1" class="data row54 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row54" class="row_heading level0 row54" >polluted_d95i</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row54_col0" class="data row54 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row54_col1" class="data row54 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row55" class="row_heading level0 row55" >short</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow55_col0" class="data row55 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow55_col1" class="data row55 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row55" class="row_heading level0 row55" >polluted_d90i</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row55_col0" class="data row55 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row55_col1" class="data row55 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row56" class="row_heading level0 row56" >ind2</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow56_col0" class="data row56 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow56_col1" class="data row56 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row56" class="row_heading level0 row56" >polluted_d85i</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row56_col0" class="data row56 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row56_col1" class="data row56 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row57" class="row_heading level0 row57" >spz</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow57_col0" class="data row57 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow57_col1" class="data row57 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row57" class="row_heading level0 row57" >polluted_d80i</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row57_col0" class="data row57 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row57_col1" class="data row57 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row58" class="row_heading level0 row58" >tcz</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow58_col0" class="data row58 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow58_col1" class="data row58 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row58" class="row_heading level0 row58" >polluted_d75i</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row58_col0" class="data row58 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row58_col1" class="data row58 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row59" class="row_heading level0 row59" >geocode4_corr</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow59_col0" class="data row59 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow59_col1" class="data row59 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row59" class="row_heading level0 row59" >polluted_d50i</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row59_col0" class="data row59 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row59_col1" class="data row59 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row60" class="row_heading level0 row60" >cityen</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow60_col0" class="data row60 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow60_col1" class="data row60 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row60" class="row_heading level0 row60" >short</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row60_col0" class="data row60 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row60_col1" class="data row60 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row61" class="row_heading level0 row61" >province_en</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow61_col0" class="data row61 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow61_col1" class="data row61 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row61" class="row_heading level0 row61" >ind2</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row61_col0" class="data row61 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row61_col1" class="data row61 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row62" class="row_heading level0 row62" >period</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow62_col0" class="data row62 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow62_col1" class="data row62 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row62" class="row_heading level0 row62" >spz</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row62_col0" class="data row62 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row62_col1" class="data row62 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row63" class="row_heading level0 row63" >polluted_d80_cit</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow63_col0" class="data row63 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow63_col1" class="data row63 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row63" class="row_heading level0 row63" >tcz</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row63_col0" class="data row63 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row63_col1" class="data row63 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row64" class="row_heading level0 row64" >polluted_d90_cit</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow64_col0" class="data row64 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow64_col1" class="data row64 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row64" class="row_heading level0 row64" >geocode4_corr</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row64_col0" class="data row64 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row64_col1" class="data row64 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row65" class="row_heading level0 row65" >tofixed</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow65_col0" class="data row65 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow65_col1" class="data row65 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row65" class="row_heading level0 row65" >cityen</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row65_col0" class="data row65 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row65_col1" class="data row65 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row66" class="row_heading level0 row66" >polluted_d95_cit</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow66_col0" class="data row66 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow66_col1" class="data row66 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row66" class="row_heading level0 row66" >province_en</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row66_col0" class="data row66 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row66_col1" class="data row66 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row67" class="row_heading level0 row67" >current_asset</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow67_col0" class="data row67 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow67_col1" class="data row67 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row67" class="row_heading level0 row67" >period</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row67_col0" class="data row67 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row67_col1" class="data row67 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row68" class="row_heading level0 row68" >capital</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow68_col0" class="data row68 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow68_col1" class="data row68 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row68" class="row_heading level0 row68" >polluted_d80_cit</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row68_col0" class="data row68 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row68_col1" class="data row68 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row69" class="row_heading level0 row69" >employment</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow69_col0" class="data row69 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow69_col1" class="data row69 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row69" class="row_heading level0 row69" >polluted_d90_cit</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row69_col0" class="data row69 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row69_col1" class="data row69 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row70" class="row_heading level0 row70" >sales</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow70_col0" class="data row70 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow70_col1" class="data row70 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row70" class="row_heading level0 row70" >tofixed</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row70_col0" class="data row70 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row70_col1" class="data row70 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row71" class="row_heading level0 row71" >output</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow71_col0" class="data row71 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow71_col1" class="data row71 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row71" class="row_heading level0 row71" >polluted_d95_cit</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row71_col0" class="data row71 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row71_col1" class="data row71 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row72" class="row_heading level0 row72" >supply_long_term_credit</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow72_col0" class="data row72 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow72_col1" class="data row72 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row72" class="row_heading level0 row72" >year</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row72_col0" class="data row72 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row72_col1" class="data row72 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row73" class="row_heading level0 row73" >supply_all_credit</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow73_col0" class="data row73 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow73_col1" class="data row73 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row73" class="row_heading level0 row73" >capital</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row73_col0" class="data row73 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row73_col1" class="data row73 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row74" class="row_heading level0 row74" >credit_constraint</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow74_col0" class="data row74 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow74_col1" class="data row74 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row74" class="row_heading level0 row74" >employment</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row74_col0" class="data row74 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row74_col1" class="data row74 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row75" class="row_heading level0 row75" >tfp_cit</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow75_col0" class="data row75 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow75_col1" class="data row75 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row75" class="row_heading level0 row75" >sales</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row75_col0" class="data row75 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row75_col1" class="data row75 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row76" class="row_heading level0 row76" >in_10_000_tonnes</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow76_col0" class="data row76 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow76_col1" class="data row76 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row76" class="row_heading level0 row76" >output</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row76_col0" class="data row76 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row76_col1" class="data row76 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row77" class="row_heading level0 row77" >d_avg_ij_o_city_mandate</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow77_col0" class="data row77 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow77_col1" class="data row77 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row77" class="row_heading level0 row77" >supply_long_term_credit</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row77_col0" class="data row77 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row77_col1" class="data row77 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row78" class="row_heading level0 row78" >above_average_mandate</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow78_col0" class="data row78 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow78_col1" class="data row78 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row78" class="row_heading level0 row78" >supply_all_credit</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row78_col0" class="data row78 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row78_col1" class="data row78 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row79" class="row_heading level0 row79" >above_threshold_mandate</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow79_col0" class="data row79 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow79_col1" class="data row79 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row79" class="row_heading level0 row79" >credit_constraint</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row79_col0" class="data row79 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row79_col1" class="data row79 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row80" class="row_heading level0 row80" >tso2_mandate_c</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow80_col0" class="data row80 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow80_col1" class="data row80 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row80" class="row_heading level0 row80" >tfp_cit</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row80_col0" class="data row80 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row80_col1" class="data row80 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row81" class="row_heading level0 row81" >so2_intensity</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow81_col0" class="data row81 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow81_col1" class="data row81 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row81" class="row_heading level0 row81" >in_10_000_tonnes</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row81_col0" class="data row81 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row81_col1" class="data row81 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row82" class="row_heading level0 row82" >tso2</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow82_col0" class="data row82 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow82_col1" class="data row82 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row82" class="row_heading level0 row82" >d_avg_ij_o_city_mandate</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row82_col0" class="data row82 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row82_col1" class="data row82 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row83" class="row_heading level0 row83" >polluted_m_cit</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow83_col0" class="data row83 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow83_col1" class="data row83 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row83" class="row_heading level0 row83" >above_average_mandate</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row83_col0" class="data row83 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row83_col1" class="data row83 col1" >0.00%</td>
             </tr>
             <tr>
-                        <th id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0calevel0_row84" class="row_heading level0 row84" >fe_c_t</th>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow84_col0" class="data row84 col0" >0</td>
-                        <td id="T_b2b7d198_8ca7_11eb_8d53_d96ff205c0carow84_col1" class="data row84 col1" >0.00%</td>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row84" class="row_heading level0 row84" >above_threshold_mandate</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row84_col0" class="data row84 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row84_col1" class="data row84 col1" >0.00%</td>
+            </tr>
+            <tr>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row85" class="row_heading level0 row85" >tso2_mandate_c</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row85_col0" class="data row85 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row85_col1" class="data row85 col1" >0.00%</td>
+            </tr>
+            <tr>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row86" class="row_heading level0 row86" >so2_intensity</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row86_col0" class="data row86 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row86_col1" class="data row86 col1" >0.00%</td>
+            </tr>
+            <tr>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row87" class="row_heading level0 row87" >tso2</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row87_col0" class="data row87 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row87_col1" class="data row87 col1" >0.00%</td>
+            </tr>
+            <tr>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row88" class="row_heading level0 row88" >polluted_m_cit</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row88_col0" class="data row88 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row88_col1" class="data row88 col1" >0.00%</td>
+            </tr>
+            <tr>
+                        <th id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081level0_row89" class="row_heading level0 row89" >fe_c_t</th>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row89_col0" class="data row89 col0" >0</td>
+                        <td id="T_0d0f9b40_99db_11eb_8651_fdc8d3ec0081row89_col1" class="data row89 col1" >0.00%</td>
             </tr>
     </tbody></table>
 </div>
@@ -17818,7 +18007,7 @@ Wall time: 16.3 s
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[29]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[52]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">README</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
@@ -17937,7 +18126,7 @@ jupyter nbconvert --to html Template_analysis_from_lambda-2020-11-22-08-12-20.ip
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[53]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">boto3</span>
@@ -17958,7 +18147,7 @@ jupyter nbconvert --to html Template_analysis_from_lambda-2020-11-22-08-12-20.ip
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[54]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">primary_key</span> <span class="o">=</span> <span class="s1">&#39;year&#39;</span>
@@ -17971,10 +18160,10 @@ jupyter nbconvert --to html Template_analysis_from_lambda-2020-11-22-08-12-20.ip
 </div>
 </div>
 
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[56]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">payload</span> <span class="o">=</span> <span class="p">{</span>
@@ -17988,7 +18177,7 @@ jupyter nbconvert --to html Template_analysis_from_lambda-2020-11-22-08-12-20.ip
         <span class="s2">&quot;group&quot;</span><span class="p">:</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">partition_keys</span><span class="p">)),</span>
         <span class="s2">&quot;keys&quot;</span><span class="p">:</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">,</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">primary_key</span><span class="p">,</span><span class="n">secondary_key</span><span class="p">),</span>
         <span class="s2">&quot;y_var&quot;</span><span class="p">:</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">y_var</span><span class="p">),</span>
-        <span class="s2">&quot;threshold&quot;</span><span class="p">:</span><span class="mi">0</span>
+        <span class="s2">&quot;threshold&quot;</span><span class="p">:</span><span class="mf">0.5</span>
     <span class="p">},</span>
 <span class="p">}</span>
 <span class="n">payload</span>
@@ -17999,10 +18188,42 @@ jupyter nbconvert --to html Template_analysis_from_lambda-2020-11-22-08-12-20.ip
 </div>
 </div>
 
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
+<div class="jp-Cell-outputWrapper">
+
+
+<div class="jp-OutputArea jp-Cell-outputArea">
+
+<div class="jp-OutputArea-child">
+
+    
+    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[56]:</div>
+
+
+
+
+<div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain">
+<pre>{&#39;input_path&#39;: &#39;s3://datalake-datascience/ANALYTICS/TEMPLATE_NOTEBOOKS/template_analysis_from_lambda.ipynb&#39;,
+ &#39;output_prefix&#39;: &#39;s3://datalake-datascience/ANALYTICS/OUTPUT/FIN_DEP_POLLUTION_BASELINE_INDUSTRY/&#39;,
+ &#39;parameters&#39;: {&#39;region&#39;: &#39;eu-west-3&#39;,
+  &#39;bucket&#39;: &#39;datalake-datascience&#39;,
+  &#39;DatabaseName&#39;: &#39;environment&#39;,
+  &#39;table_name&#39;: &#39;fin_dep_pollution_baseline_industry&#39;,
+  &#39;group&#39;: &#39;province_en,geocode4_corr,ind2,year&#39;,
+  &#39;keys&#39;: &#39;year,period&#39;,
+  &#39;y_var&#39;: &#39;tso2&#39;,
+  &#39;threshold&#39;: 0.5}}</pre>
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[57]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">response</span> <span class="o">=</span> <span class="n">client_lambda</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span>
@@ -18019,6 +18240,44 @@ jupyter nbconvert --to html Template_analysis_from_lambda-2020-11-22-08-12-20.ip
 </div>
 </div>
 
+<div class="jp-Cell-outputWrapper">
+
+
+<div class="jp-OutputArea jp-Cell-outputArea">
+
+<div class="jp-OutputArea-child">
+
+    
+    <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[57]:</div>
+
+
+
+
+<div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain">
+<pre>{&#39;ResponseMetadata&#39;: {&#39;RequestId&#39;: &#39;997221ab-9f64-4bd1-819e-452406d67588&#39;,
+  &#39;HTTPStatusCode&#39;: 200,
+  &#39;HTTPHeaders&#39;: {&#39;date&#39;: &#39;Sat, 10 Apr 2021 08:59:57 GMT&#39;,
+   &#39;content-type&#39;: &#39;application/json&#39;,
+   &#39;content-length&#39;: &#39;75&#39;,
+   &#39;connection&#39;: &#39;keep-alive&#39;,
+   &#39;x-amzn-requestid&#39;: &#39;997221ab-9f64-4bd1-819e-452406d67588&#39;,
+   &#39;x-amzn-remapped-content-length&#39;: &#39;0&#39;,
+   &#39;x-amz-executed-version&#39;: &#39;$LATEST&#39;,
+   &#39;x-amz-log-result&#39;: &#39;U1RBUlQgUmVxdWVzdElkOiA5OTcyMjFhYi05ZjY0LTRiZDEtODE5ZS00NTI0MDZkNjc1ODggVmVyc2lvbjogJExBVEVTVApFTkQgUmVxdWVzdElkOiA5OTcyMjFhYi05ZjY0LTRiZDEtODE5ZS00NTI0MDZkNjc1ODgKUkVQT1JUIFJlcXVlc3RJZDogOTk3MjIxYWItOWY2NC00YmQxLTgxOWUtNDUyNDA2ZDY3NTg4CUR1cmF0aW9uOiAyNDUyLjM3IG1zCUJpbGxlZCBEdXJhdGlvbjogMjQ1MyBtcwlNZW1vcnkgU2l6ZTogMTI4IE1CCU1heCBNZW1vcnkgVXNlZDogODQgTUIJSW5pdCBEdXJhdGlvbjogMzAyLjMzIG1zCQo=&#39;,
+   &#39;x-amzn-trace-id&#39;: &#39;root=1-6071690a-2a02b8c700f11e140a2aa359;sampled=0&#39;},
+  &#39;RetryAttempts&#39;: 0},
+ &#39;StatusCode&#39;: 200,
+ &#39;LogResult&#39;: &#39;U1RBUlQgUmVxdWVzdElkOiA5OTcyMjFhYi05ZjY0LTRiZDEtODE5ZS00NTI0MDZkNjc1ODggVmVyc2lvbjogJExBVEVTVApFTkQgUmVxdWVzdElkOiA5OTcyMjFhYi05ZjY0LTRiZDEtODE5ZS00NTI0MDZkNjc1ODgKUkVQT1JUIFJlcXVlc3RJZDogOTk3MjIxYWItOWY2NC00YmQxLTgxOWUtNDUyNDA2ZDY3NTg4CUR1cmF0aW9uOiAyNDUyLjM3IG1zCUJpbGxlZCBEdXJhdGlvbjogMjQ1MyBtcwlNZW1vcnkgU2l6ZTogMTI4IE1CCU1heCBNZW1vcnkgVXNlZDogODQgTUIJSW5pdCBEdXJhdGlvbjogMzAyLjMzIG1zCQo=&#39;,
+ &#39;ExecutedVersion&#39;: &#39;$LATEST&#39;,
+ &#39;Payload&#39;: &lt;botocore.response.StreamingBody at 0x7fe8117cd790&gt;}</pre>
+</div>
+
+</div>
+
+</div>
+
+</div>
+
 </div>
 <div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
@@ -18027,7 +18286,7 @@ jupyter nbconvert --to html Template_analysis_from_lambda-2020-11-22-08-12-20.ip
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[30]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[58]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">os</span><span class="o">,</span> <span class="nn">time</span><span class="o">,</span> <span class="nn">shutil</span><span class="o">,</span> <span class="nn">urllib</span><span class="o">,</span> <span class="nn">ipykernel</span><span class="o">,</span> <span class="nn">json</span>
@@ -18047,66 +18306,10 @@ jupyter nbconvert --to html Template_analysis_from_lambda-2020-11-22-08-12-20.ip
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[31]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[59]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">create_report</span><span class="p">(</span><span class="n">extension</span> <span class="o">=</span> <span class="s2">&quot;html&quot;</span><span class="p">,</span> <span class="n">keep_code</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">notebookname</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Create a report from the current notebook and save it in the </span>
-<span class="sd">    Report folder (Parent-&gt; child directory)</span>
-<span class="sd">    </span>
-<span class="sd">    1. Exctract the current notbook name</span>
-<span class="sd">    2. Convert the Notebook </span>
-<span class="sd">    3. Move the newly created report</span>
-<span class="sd">    </span>
-<span class="sd">    Args:</span>
-<span class="sd">    extension: string. Can be &quot;html&quot;, &quot;pdf&quot;, &quot;md&quot;</span>
-<span class="sd">    </span>
-<span class="sd">    </span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    
-    <span class="c1">### Get notebook name</span>
-    <span class="n">connection_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">ipykernel</span><span class="o">.</span><span class="n">get_connection_file</span><span class="p">())</span>
-    <span class="n">kernel_id</span> <span class="o">=</span> <span class="n">connection_file</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-
-    <span class="k">for</span> <span class="n">srv</span> <span class="ow">in</span> <span class="n">notebookapp</span><span class="o">.</span><span class="n">list_running_servers</span><span class="p">():</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">srv</span><span class="p">[</span><span class="s1">&#39;token&#39;</span><span class="p">]</span><span class="o">==</span><span class="s1">&#39;&#39;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">srv</span><span class="p">[</span><span class="s1">&#39;password&#39;</span><span class="p">]:</span>  
-                <span class="n">req</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">srv</span><span class="p">[</span><span class="s1">&#39;url&#39;</span><span class="p">]</span><span class="o">+</span><span class="s1">&#39;api/sessions&#39;</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">req</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">srv</span><span class="p">[</span><span class="s1">&#39;url&#39;</span><span class="p">]</span><span class="o">+</span> \
-                                             <span class="s1">&#39;api/sessions?token=&#39;</span> <span class="o">+</span> \
-                                             <span class="n">srv</span><span class="p">[</span><span class="s1">&#39;token&#39;</span><span class="p">])</span>
-            <span class="n">sessions</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">req</span><span class="p">)</span>
-            <span class="n">notebookname</span> <span class="o">=</span> <span class="n">sessions</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;name&#39;</span><span class="p">]</span>
-        <span class="k">except</span><span class="p">:</span>
-            <span class="n">notebookname</span> <span class="o">=</span> <span class="n">notebookname</span>  
-    
-    <span class="n">sep</span> <span class="o">=</span> <span class="s1">&#39;.&#39;</span>
-    <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
-    <span class="c1">#parent_path = str(Path(path).parent)</span>
-    
-    <span class="c1">### Path report</span>
-    <span class="c1">#path_report = &quot;{}/Reports&quot;.format(parent_path)</span>
-    <span class="c1">#path_report = &quot;{}/Reports&quot;.format(path)</span>
-    
-    <span class="c1">### Path destination</span>
-    <span class="n">name_no_extension</span> <span class="o">=</span> <span class="n">notebookname</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">sep</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-    <span class="n">source_to_move</span> <span class="o">=</span> <span class="n">name_no_extension</span> <span class="o">+</span><span class="s1">&#39;.</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">extension</span><span class="p">)</span>
-    <span class="n">dest</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span><span class="s1">&#39;Reports&#39;</span><span class="p">,</span> <span class="n">source_to_move</span><span class="p">)</span>
-    
-    <span class="c1">### Generate notebook</span>
-    <span class="k">if</span> <span class="n">keep_code</span><span class="p">:</span>
-        <span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span class="s1">&#39;jupyter nbconvert --to </span><span class="si">{}</span><span class="s1"> </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-    <span class="n">extension</span><span class="p">,</span><span class="n">notebookname</span><span class="p">))</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span class="s1">&#39;jupyter nbconvert --no-input --to </span><span class="si">{}</span><span class="s1"> </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-    <span class="n">extension</span><span class="p">,</span><span class="n">notebookname</span><span class="p">))</span>
-    
-    <span class="c1">### Move notebook to report folder</span>
-    <span class="c1">#time.sleep(5)</span>
-    <span class="n">shutil</span><span class="o">.</span><span class="n">move</span><span class="p">(</span><span class="n">source_to_move</span><span class="p">,</span> <span class="n">dest</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Report Available at this adress:</span><span class="se">\n</span><span class="s2"> </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dest</span><span class="p">))</span>
+<div class=" highlight hl-ipython3"><pre><span></span> 
 </pre></div>
 
      </div>

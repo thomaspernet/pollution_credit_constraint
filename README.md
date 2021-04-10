@@ -18,6 +18,9 @@ Study how a bank’s involvement in a firm's financing may be in line with envir
    - [README.md](https://github.com/thomaspernet/pollution_credit_constraint/tree/master/01_data_preprocessing/README.md)
    - **00_download_data/**
      - [README.md](https://github.com/thomaspernet/pollution_credit_constraint/tree/master/01_data_preprocessing/00_download_data/README.md)
+     - **ALMANAC_BANK_LOAN/**
+       - [provinces.py](https://github.com/thomaspernet/pollution_credit_constraint/tree/master/01_data_preprocessing/00_download_data/ALMANAC_BANK_LOAN/provinces.py)
+       - [socb_loan.py](https://github.com/thomaspernet/pollution_credit_constraint/tree/master/01_data_preprocessing/00_download_data/ALMANAC_BANK_LOAN/socb_loan.py)
      - **TARGET_SO2/**
        - [china_cities_target_so2.py](https://github.com/thomaspernet/pollution_credit_constraint/tree/master/01_data_preprocessing/00_download_data/TARGET_SO2/china_cities_target_so2.py)
    - **02_transform_tables/**
@@ -42,6 +45,7 @@ Study how a bank’s involvement in a firm's financing may be in line with envir
          - [00_baseline_credit_constraint_n_supply.html](https://htmlpreview.github.io/?https://github.com/thomaspernet/pollution_credit_constraint/blob/master/02_data_analysis/01_model_estimation/02_baseline_tables/Reports/00_baseline_credit_constraint_n_supply.html)
  - **utils/**
    - [README.md](https://github.com/thomaspernet/pollution_credit_constraint/tree/master/utils/README.md)
+   - [create_report.py](https://github.com/thomaspernet/pollution_credit_constraint/tree/master/utils/create_report.py)
    - [create_schema.py](https://github.com/thomaspernet/pollution_credit_constraint/tree/master/utils/create_schema.py)
    - [make_toc.py](https://github.com/thomaspernet/pollution_credit_constraint/tree/master/utils/make_toc.py)
    - [prepare_catalog.py](https://github.com/thomaspernet/pollution_credit_constraint/tree/master/utils/prepare_catalog.py)
