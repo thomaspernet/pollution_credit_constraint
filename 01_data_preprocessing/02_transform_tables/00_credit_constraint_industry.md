@@ -28,7 +28,13 @@ Follow this notebook to construct the table https://github.com/thomaspernet/Fina
 
 ## Variables
 
-None
+1. Compute sob loan share
+2. Compute credit supply
+3. merge credit with baseline
+    - Currently, table has province Chinese name only
+        1. Merge credit supply using year and province
+        2. Merge big bank share using year and province
+    - up to 2004
 
 ## Merge
 
@@ -165,7 +171,7 @@ s3_output_example = 'SQL_OUTPUT_ATHENA'
 ```python
 query= """
 WITH aggregate_pol AS (
-SELECT 
+  SELECT 
     year, 
     geocode4_corr, 
     province_en, 
@@ -185,7 +191,7 @@ SELECT
         geocode4_corr, 
         china_city_sector_pollution.cityen, 
         --indus_code,
-        ind2,  
+        ind2, 
         tso2, 
         lower_location, 
         larger_location, 
@@ -195,14 +201,14 @@ SELECT
         INNER JOIN (
           SELECT 
             extra_code, 
-            geocode4_corr,
-          province_en
+            geocode4_corr, 
+            province_en 
           FROM 
             chinese_lookup.china_city_code_normalised 
           GROUP BY 
             extra_code, 
-            geocode4_corr,
-          province_en
+            geocode4_corr, 
+            province_en
         ) as no_dup_citycode ON china_city_sector_pollution.citycode = no_dup_citycode.extra_code
     ) 
   GROUP BY 
@@ -225,7 +231,8 @@ SELECT
   cityen, 
   aggregate_pol.geocode4_corr, 
   CASE WHEN tcz IS NULL THEN '0' ELSE tcz END AS tcz, 
-  CASE WHEN spz IS NULL OR spz = '#N/A' THEN '0' ELSE spz END AS spz, 
+  CASE WHEN spz IS NULL 
+  OR spz = '#N/A' THEN '0' ELSE spz END AS spz, 
   --aggregate_pol.cic, 
   aggregate_pol.ind2, 
   CASE WHEN short IS NULL THEN 'Unknown' ELSE short END AS short, 
@@ -235,76 +242,81 @@ SELECT
   polluted_d85i, 
   polluted_d90i, 
   polluted_d95i, 
-  polluted_mi,
+  polluted_mi, 
   polluted_d50_cit, 
   polluted_d75_cit, 
   polluted_d80_cit, 
   polluted_d85_cit, 
   polluted_d90_cit, 
   polluted_d95_cit, 
-  polluted_m_cit,
+  polluted_m_cit, 
   tso2, 
   CAST(
     tso2 AS DECIMAL(16, 5)
   ) / CAST(
     output AS DECIMAL(16, 5)
   ) AS so2_intensity, 
-  tso2_mandate_c,
-  above_threshold_mandate,
-  above_average_mandate,
-  avg_ij_o_city_mandate,
+  tso2_mandate_c, 
+  above_threshold_mandate, 
+  above_average_mandate, 
+  avg_ij_o_city_mandate, 
   CASE WHEN d_avg_ij_o_city_mandate IS NULL THEN 'FALSE' ELSE d_avg_ij_o_city_mandate END AS d_avg_ij_o_city_mandate, 
   in_10_000_tonnes, 
-  tfp_cit,
-  credit_constraint,
-  1/supply_all_credit as supply_all_credit,
-  1/supply_long_term_credit as supply_long_term_credit,
-  output,
-  sales,
-  employment,
-  capital,
-  current_asset,
-  tofixed,
-  total_liabilities,
-  total_asset,
-  tangible,
-  cashflow,
-  current_ratio,
-  lag_current_ratio,
-  liabilities_tot_asset,
-  sales_tot_asset,
-  lag_sales_tot_asset,
-  asset_tangibility_tot_asset,
-  lag_liabilities_tot_asset,
-  cashflow_to_tangible,
-  lag_cashflow_to_tangible,
-  cashflow_tot_asset,
-  lag_cashflow_tot_asset,
-  return_to_sale,
-  lag_return_to_sale,
+  tfp_cit, 
+  credit_constraint, 
+  1 / supply_all_credit as supply_all_credit, 
+  1 / supply_long_term_credit as supply_long_term_credit,
+  share_big_bank_loan,
+  share_big_loan,
+  credit_supply,
+  credit_supply_long_term,
+  credit_supply_short_term,
+  output, 
+  sales, 
+  employment, 
+  capital, 
+  current_asset, 
+  tofixed, 
+  total_liabilities, 
+  total_asset, 
+  tangible, 
+  cashflow, 
+  current_ratio, 
+  lag_current_ratio, 
+  liabilities_tot_asset, 
+  sales_tot_asset, 
+  lag_sales_tot_asset, 
+  asset_tangibility_tot_asset, 
+  lag_liabilities_tot_asset, 
+  cashflow_to_tangible, 
+  lag_cashflow_to_tangible, 
+  cashflow_tot_asset, 
+  lag_cashflow_tot_asset, 
+  return_to_sale, 
+  lag_return_to_sale, 
   lower_location, 
   larger_location, 
-  coastal,
-  dominated_output_soe_c,
-  dominated_employment_soe_c,
-  dominated_sales_soe_c,
-  dominated_capital_soe_c,
-  dominated_output_for_c,
-  dominated_employment_for_c,
-  dominated_sales_for_c,
-  dominated_capital_for_c,  
-  dominated_output_i,
-  dominated_employ_i,
-  dominated_sales_i,
-  dominated_capital_i,
-  dominated_output_soe_i,
-  dominated_employment_soe_i,
-  dominated_sales_soe_i,
-  dominated_capital_soe_i,
-  dominated_output_for_i,
-  dominated_employment_for_i,
-  dominated_sales_for_i,
-  dominated_capital_for_i,  
+  coastal, 
+  dominated_output_soe_c, 
+  dominated_employment_soe_c, 
+  dominated_sales_soe_c, 
+  dominated_capital_soe_c, 
+  dominated_output_for_c, 
+  dominated_employment_for_c, 
+  dominated_sales_for_c, 
+  dominated_capital_for_c, 
+  dominated_output_i, 
+  dominated_employ_i, 
+  dominated_sales_i, 
+  dominated_capital_i, 
+  dominated_output_soe_i, 
+  dominated_employment_soe_i, 
+  dominated_sales_soe_i, 
+  dominated_capital_soe_i, 
+  dominated_output_for_i, 
+  dominated_employment_for_i, 
+  dominated_sales_for_i, 
+  dominated_capital_for_i, 
   DENSE_RANK() OVER (
     ORDER BY 
       city_mandate.geocode4_corr, 
@@ -323,77 +335,76 @@ SELECT
 FROM 
   aggregate_pol 
   INNER JOIN (
-  SELECT 
-  indu_2,
-  current_asset,
-  tofixed,
-  total_liabilities,
-  total_asset,
-  tangible,
-  cashflow,
-  current_ratio,
-  lag_current_ratio,
-  liabilities_tot_asset,
-  sales_tot_asset,
-  lag_sales_tot_asset,
-  asset_tangibility_tot_asset,
-  lag_liabilities_tot_asset,
-  cashflow_to_tangible,
-  lag_cashflow_to_tangible,
-  cashflow_tot_asset,
-  lag_cashflow_tot_asset,
-  return_to_sale,
-  lag_return_to_sale
-    
-  FROM firms_survey.asif_industry_financial_ratio_industry 
-  WHERE year = '2002'
-  ) AS asif_industry_financial_ratio_industry
-  ON 
-  aggregate_pol.ind2 = asif_industry_financial_ratio_industry.indu_2 
+    SELECT 
+      indu_2, 
+      current_asset, 
+      tofixed, 
+      total_liabilities, 
+      total_asset, 
+      tangible, 
+      cashflow, 
+      current_ratio, 
+      lag_current_ratio, 
+      liabilities_tot_asset, 
+      sales_tot_asset, 
+      lag_sales_tot_asset, 
+      asset_tangibility_tot_asset, 
+      lag_liabilities_tot_asset, 
+      cashflow_to_tangible, 
+      lag_cashflow_to_tangible, 
+      cashflow_tot_asset, 
+      lag_cashflow_tot_asset, 
+      return_to_sale, 
+      lag_return_to_sale 
+    FROM 
+      firms_survey.asif_industry_financial_ratio_industry 
+    WHERE 
+      year = '2002'
+  ) AS asif_industry_financial_ratio_industry ON aggregate_pol.ind2 = asif_industry_financial_ratio_industry.indu_2 
   INNER JOIN (
     SELECT 
-  geocode4_corr, 
-  tso2_mandate_c, 
-  in_10_000_tonnes, 
-  MAP(
-    ARRAY[.5, 
-    .75, 
-    .90, 
-    .95 ], 
-    zip_with(
-      transform(
-        sequence(1, 4), 
-        x -> tso2_mandate_c
-      ), 
-      tso2_mandate_c_pct, 
-      (x, y) -> x < y
-    )
-  ) AS above_threshold_mandate, 
-  CASE WHEN tso2_mandate_c > tso2_mandate_c_avg THEN 'ABOVE' ELSE 'BELOW' END AS above_average_mandate 
-FROM 
-  (
-    (
-      SELECT 
-        'TEMP' as temp, 
-        approx_percentile(
-          tso2_mandate_c, ARRAY[.5,.75,.90, 
-          .95]
-        ) AS tso2_mandate_c_pct, 
-        AVG(tso2_mandate_c) AS tso2_mandate_c_avg 
-      FROM 
-        policy.china_city_reduction_mandate
-    ) as percentile 
-    LEFT JOIN (
-      SELECT 
-        'TEMP' as temp, 
-        citycn, 
-        tso2_mandate_c, 
-        in_10_000_tonnes 
-      FROM 
-        policy.china_city_reduction_mandate
-    ) as mandate ON percentile.temp = mandate.temp
-  ) as map_mandate
-  INNER JOIN chinese_lookup.china_city_code_normalised ON map_mandate.citycn = china_city_code_normalised.citycn 
+      geocode4_corr, 
+      tso2_mandate_c, 
+      in_10_000_tonnes, 
+      MAP(
+        ARRAY[.5, 
+        .75, 
+        .90, 
+        .95 ], 
+        zip_with(
+          transform(
+            sequence(1, 4), 
+            x -> tso2_mandate_c
+          ), 
+          tso2_mandate_c_pct, 
+          (x, y) -> x < y
+        )
+      ) AS above_threshold_mandate, 
+      CASE WHEN tso2_mandate_c > tso2_mandate_c_avg THEN 'ABOVE' ELSE 'BELOW' END AS above_average_mandate 
+    FROM 
+      (
+        (
+          SELECT 
+            'TEMP' as temp, 
+            approx_percentile(
+              tso2_mandate_c, ARRAY[.5,.75,.90, 
+              .95]
+            ) AS tso2_mandate_c_pct, 
+            AVG(tso2_mandate_c) AS tso2_mandate_c_avg 
+          FROM 
+            policy.china_city_reduction_mandate
+        ) as percentile 
+        LEFT JOIN (
+          SELECT 
+            'TEMP' as temp, 
+            citycn, 
+            tso2_mandate_c, 
+            in_10_000_tonnes 
+          FROM 
+            policy.china_city_reduction_mandate
+        ) as mandate ON percentile.temp = mandate.temp
+      ) as map_mandate 
+      INNER JOIN chinese_lookup.china_city_code_normalised ON map_mandate.citycn = china_city_code_normalised.citycn 
     WHERE 
       extra_code = geocode4_corr
   ) as city_mandate ON aggregate_pol.geocode4_corr = city_mandate.geocode4_corr 
@@ -402,34 +413,32 @@ FROM
   LEFT JOIN (
     SELECT 
       ind2, 
-      year,
+      year, 
       polluted_d50i, 
       polluted_d75i, 
       polluted_d80i, 
       polluted_d85i, 
       polluted_d90i, 
       polluted_d95i, 
-      polluted_mi
+      polluted_mi 
     FROM 
-      "environment"."china_sector_pollution_threshold" 
-
+      "environment"."china_sector_pollution_threshold"
   ) as polluted_sector ON aggregate_pol.ind2 = polluted_sector.ind2 
   and aggregate_pol.year = polluted_sector.year 
   LEFT JOIN (
     SELECT 
       ind2, 
-      year,
-      geocode4_corr,
+      year, 
+      geocode4_corr, 
       polluted_d50_cit, 
       polluted_d75_cit, 
       polluted_d80_cit, 
       polluted_d85_cit, 
       polluted_d90_cit, 
       polluted_d95_cit, 
-      polluted_m_cit
+      polluted_m_cit 
     FROM 
-      "environment"."china_city_sector_year_pollution_threshold" 
-
+      "environment"."china_city_sector_year_pollution_threshold"
   ) as polluted_sector_cit ON aggregate_pol.ind2 = polluted_sector_cit.ind2 
   and aggregate_pol.year = polluted_sector_cit.year 
   and aggregate_pol.geocode4_corr = polluted_sector_cit.geocode4_corr 
@@ -444,61 +453,60 @@ FROM
     SELECT 
       year, 
       geocode4_corr, 
-      indu_2,
+      indu_2, 
       -- cic, 
-      SUM(output) AS output,
+      SUM(output) AS output, 
       SUM(employ) AS employment, 
-      SUM(captal) AS capital,
-      SUM(sales) as sales,
+      SUM(captal) AS capital, 
+      SUM(sales) as sales, 
       --SUM(toasset) as toasset,
-      AVG(tfp_op) as tfp_cit
+      AVG(tfp_op) as tfp_cit 
     FROM 
       (
         SELECT 
-      asif_city.firm, 
-      tfp_op, 
-      asif_city.year, 
-      asif_city.geocode4_corr, 
-      asif_tfp_firm_level.indu_2,
-      -- asif_city.cic
-      asif_city.output,
-      asif_city.employ, 
-      asif_city.captal, 
-      asif_city.sales
-      --asif_city.toasset 
-    FROM 
-      firms_survey.asif_tfp_firm_level 
-      RIGHT JOIN (
-        SELECT 
-          firm, 
-          year, 
-          geocode4_corr, 
-          -- cic,
-          CASE WHEN LENGTH(cic) = 4 THEN substr(cic, 1, 2) ELSE concat(
-            '0', 
-            substr(cic, 1, 1)
-          ) END AS indu_2, 
-          output, 
-          employ, 
-          captal, 
-          sales, 
-          toasset 
+          asif_city.firm, 
+          tfp_op, 
+          asif_city.year, 
+          asif_city.geocode4_corr, 
+          asif_tfp_firm_level.indu_2, 
+          -- asif_city.cic
+          asif_city.output, 
+          asif_city.employ, 
+          asif_city.captal, 
+          asif_city.sales --asif_city.toasset 
         FROM 
-          firms_survey.asif_firms_prepared 
-          INNER JOIN (
+          firms_survey.asif_tfp_firm_level 
+          RIGHT JOIN (
             SELECT 
-              extra_code, 
-              geocode4_corr 
+              firm, 
+              year, 
+              geocode4_corr, 
+              -- cic,
+              CASE WHEN LENGTH(cic) = 4 THEN substr(cic, 1, 2) ELSE concat(
+                '0', 
+                substr(cic, 1, 1)
+              ) END AS indu_2, 
+              output, 
+              employ, 
+              captal, 
+              sales, 
+              toasset 
             FROM 
-              chinese_lookup.china_city_code_normalised 
-            GROUP BY 
-              extra_code, 
-              geocode4_corr
-          ) as no_dup_citycode ON asif_firms_prepared.citycode = no_dup_citycode.extra_code
-      ) as asif_city ON asif_tfp_firm_level.firm = asif_city.firm 
-      and asif_tfp_firm_level.year = asif_city.year 
-      and asif_tfp_firm_level.indu_2 = asif_city.indu_2 
-      and asif_tfp_firm_level.geocode4_corr = asif_city.geocode4_corr 
+              firms_survey.asif_firms_prepared 
+              INNER JOIN (
+                SELECT 
+                  extra_code, 
+                  geocode4_corr 
+                FROM 
+                  chinese_lookup.china_city_code_normalised 
+                GROUP BY 
+                  extra_code, 
+                  geocode4_corr
+              ) as no_dup_citycode ON asif_firms_prepared.citycode = no_dup_citycode.extra_code
+          ) as asif_city ON asif_tfp_firm_level.firm = asif_city.firm 
+          and asif_tfp_firm_level.year = asif_city.year 
+          and asif_tfp_firm_level.indu_2 = asif_city.indu_2 
+          and asif_tfp_firm_level.geocode4_corr = asif_city.geocode4_corr
       ) 
     WHERE 
       year in (
@@ -507,35 +515,70 @@ FROM
       ) 
     GROUP BY 
       geocode4_corr, 
-      indu_2,
+      indu_2, 
       -- cic, 
       year
-  ) as agg_output ON aggregate_pol.geocode4_corr = agg_output.geocode4_corr 
-  -- AND aggregate_pol.cic = agg_output.cic 
+  ) as agg_output ON aggregate_pol.geocode4_corr = agg_output.geocode4_corr -- AND aggregate_pol.cic = agg_output.cic 
   AND aggregate_pol.ind2 = agg_output.indu_2 
   AND aggregate_pol.year = agg_output.year 
-  
-  LEFT JOIN firms_survey.asif_industry_characteristics_ownership
-    ON aggregate_pol.geocode4_corr = asif_industry_characteristics_ownership.geocode4_corr
-    AND aggregate_pol.ind2 = asif_industry_characteristics_ownership.indu_2
-  LEFT JOIN firms_survey.asif_city_characteristics_ownership
-    ON aggregate_pol.geocode4_corr = asif_city_characteristics_ownership.geocode4_corr
-  LEFT JOIN chinese_lookup.province_credit_constraint ON aggregate_pol.province_en = province_credit_constraint.Province
+  LEFT JOIN firms_survey.asif_industry_characteristics_ownership ON aggregate_pol.geocode4_corr = asif_industry_characteristics_ownership.geocode4_corr 
+  AND aggregate_pol.ind2 = asif_industry_characteristics_ownership.indu_2 
+  LEFT JOIN firms_survey.asif_city_characteristics_ownership ON aggregate_pol.geocode4_corr = asif_city_characteristics_ownership.geocode4_corr 
+  LEFT JOIN chinese_lookup.province_credit_constraint ON aggregate_pol.province_en = province_credit_constraint.Province 
   LEFT JOIN (
-    SELECT geocode4_corr, avg_ij_o_city_mandate, d_avg_ij_o_city_mandate 
-    FROM "policy"."china_spatial_relocation" 
-    ) as relocation
-    ON aggregate_pol.geocode4_corr = relocation.geocode4_corr
+    SELECT 
+      geocode4_corr, 
+      avg_ij_o_city_mandate, 
+      d_avg_ij_o_city_mandate 
+    FROM 
+      "policy"."china_spatial_relocation"
+  ) as relocation ON aggregate_pol.geocode4_corr = relocation.geocode4_corr 
+  LEFT JOIN (
+    SELECT 
+      province_loan_and_credit.year, 
+      province_loan_and_credit.province_en, 
+      CAST(
+        total_loan_big_four AS DECIMAL(16, 5)
+      )/ CAST(
+        total_bank_loan AS DECIMAL(16, 5)
+      ) AS share_big_bank_loan, 
+      CAST(
+        total_loan_big_four AS DECIMAL(16, 5)
+      )/ CAST(
+        total_loan AS DECIMAL(16, 5)
+      ) AS share_big_loan, 
+      CAST(
+        total_bank_loan AS DECIMAL(16, 5)
+      )/ CAST(
+        total_gdp AS DECIMAL(16, 5)
+      ) AS credit_supply, 
+      CAST(
+        total_long_term_loan AS DECIMAL(16, 5)
+      )/ CAST(
+        total_gdp AS DECIMAL(16, 5)
+      ) AS credit_supply_long_term, 
+      CAST(
+        total_short_term AS DECIMAL(16, 5)
+      )/ CAST(
+        total_gdp AS DECIMAL(16, 5)
+      ) AS credit_supply_short_term 
+    FROM 
+      almanac_bank_china.bank_socb_loan 
+      RIGHT JOIN almanac_bank_china.province_loan_and_credit ON bank_socb_loan.year = province_loan_and_credit.year 
+      AND bank_socb_loan.province_en = province_loan_and_credit.province_en
+  ) as credit ON aggregate_pol.year = credit.year 
+  AND aggregate_pol.province_en = credit.province_en 
 WHERE 
   tso2 > 0 
   AND output > 0 
   and capital > 0 
-  and employment > 0
-  and current_ratio > 0
-  and cashflow_to_tangible > 0
-  AND aggregate_pol.ind2 != '43'
-  -- AND tfp_cit > 0
-  LIMIT 10
+  and employment > 0 
+  and current_ratio > 0 
+  and cashflow_to_tangible > 0 
+  AND aggregate_pol.ind2 != '43' -- AND tfp_cit > 0
+LIMIT 
+  10
+
 """
 output = s3.run_query(
                     query=query,
@@ -680,6 +723,11 @@ SELECT
   credit_constraint,
   1/supply_all_credit as supply_all_credit,
   1/supply_long_term_credit as supply_long_term_credit,
+  share_big_bank_loan,
+  share_big_loan,
+  credit_supply,
+  credit_supply_long_term,
+  credit_supply_short_term,
   output,
   sales,
   employment,
@@ -947,6 +995,41 @@ FROM
 FROM "policy"."china_spatial_relocation"
     ) as relocation
     ON aggregate_pol.geocode4_corr = relocation.geocode4_corr
+LEFT JOIN (
+    SELECT 
+      province_loan_and_credit.year, 
+      province_loan_and_credit.province_en, 
+      CAST(
+        total_loan_big_four AS DECIMAL(16, 5)
+      )/ CAST(
+        total_bank_loan AS DECIMAL(16, 5)
+      ) AS share_big_bank_loan, 
+      CAST(
+        total_loan_big_four AS DECIMAL(16, 5)
+      )/ CAST(
+        total_loan AS DECIMAL(16, 5)
+      ) AS share_big_loan, 
+      CAST(
+        total_bank_loan AS DECIMAL(16, 5)
+      )/ CAST(
+        total_gdp AS DECIMAL(16, 5)
+      ) AS credit_supply, 
+      CAST(
+        total_long_term_loan AS DECIMAL(16, 5)
+      )/ CAST(
+        total_gdp AS DECIMAL(16, 5)
+      ) AS credit_supply_long_term, 
+      CAST(
+        total_short_term AS DECIMAL(16, 5)
+      )/ CAST(
+        total_gdp AS DECIMAL(16, 5)
+      ) AS credit_supply_short_term 
+    FROM 
+      almanac_bank_china.bank_socb_loan 
+      RIGHT JOIN almanac_bank_china.province_loan_and_credit ON bank_socb_loan.year = province_loan_and_credit.year 
+      AND bank_socb_loan.province_en = province_loan_and_credit.province_en
+  ) as credit ON aggregate_pol.year = credit.year 
+  AND aggregate_pol.province_en = credit.province_en 
 WHERE 
   tso2 > 0 
   AND output > 0 
@@ -1046,6 +1129,11 @@ schema = [{'Name': 'year', 'Type': 'string', 'Comment': 'year from 2001 to 2007'
         'Comment': 'province external supply of credit'},
     {'Name': 'supply_long_term_credit', 'Type': 'float',
         'Comment': 'province external supply of long term credit'},
+ {'Name': 'share_big_bank_loan', 'Type': 'decimal(21,5)', 'Comment': 'share four State-owned commercial banks in total bank lending'},
+ {'Name': 'share_big_loan', 'Type': 'decimal(21,5)', 'Comment': 'share four State-owned commercial banks in total lending'},
+ {'Name': 'credit_supply', 'Type': 'decimal(21,5)', 'Comment': 'total bank lending normalised by gdp'},
+ {'Name': 'credit_supply_long_term', 'Type': 'decimal(21,5)', 'Comment': 'total long term bank lending normalised by gdp'},
+ {'Name': 'credit_supply_short_term', 'Type': 'decimal(21,5)', 'Comment': 'total short term bank lending normalised by gdp'},
  {'Name': 'output', 'Type': 'bigint', 'Comment': 'Output'},
  {'Name': 'sales', 'Type': 'bigint', 'Comment': 'Sales'},
  {'Name': 'employment', 'Type': 'bigint', 'Comment': 'Employemnt'},
@@ -1521,7 +1609,7 @@ payload = {
         "group": "{}".format(','.join(partition_keys)),
         "keys": "{},{}".format(primary_key,secondary_key),
         "y_var": "{}".format(y_var),
-        "threshold":0
+        "threshold":0.5
     },
 }
 payload
@@ -1547,70 +1635,11 @@ import sys
 sys.path.append(os.path.join(parent_path, 'utils'))
 import make_toc
 import create_schema
+import create_report
 ```
 
 ```python
-def create_report(extension = "html", keep_code = False, notebookname = None):
-    """
-    Create a report from the current notebook and save it in the 
-    Report folder (Parent-> child directory)
-    
-    1. Exctract the current notbook name
-    2. Convert the Notebook 
-    3. Move the newly created report
-    
-    Args:
-    extension: string. Can be "html", "pdf", "md"
-    
-    
-    """
-    
-    ### Get notebook name
-    connection_file = os.path.basename(ipykernel.get_connection_file())
-    kernel_id = connection_file.split('-', 1)[0].split('.')[0]
-
-    for srv in notebookapp.list_running_servers():
-        try:
-            if srv['token']=='' and not srv['password']:  
-                req = urllib.request.urlopen(srv['url']+'api/sessions')
-            else:
-                req = urllib.request.urlopen(srv['url']+ \
-                                             'api/sessions?token=' + \
-                                             srv['token'])
-            sessions = json.load(req)
-            notebookname = sessions[0]['name']
-        except:
-            notebookname = notebookname  
-    
-    sep = '.'
-    path = os.getcwd()
-    #parent_path = str(Path(path).parent)
-    
-    ### Path report
-    #path_report = "{}/Reports".format(parent_path)
-    #path_report = "{}/Reports".format(path)
-    
-    ### Path destination
-    name_no_extension = notebookname.split(sep, 1)[0]
-    source_to_move = name_no_extension +'.{}'.format(extension)
-    dest = os.path.join(path,'Reports', source_to_move)
-    
-    ### Generate notebook
-    if keep_code:
-        os.system('jupyter nbconvert --to {} {}'.format(
-    extension,notebookname))
-    else:
-        os.system('jupyter nbconvert --no-input --to {} {}'.format(
-    extension,notebookname))
-    
-    ### Move notebook to report folder
-    #time.sleep(5)
-    shutil.move(source_to_move, dest)
-    print("Report Available at this adress:\n {}".format(dest))
-```
-
-```python
-create_report(extension = "html", keep_code = True, notebookname =  notebookname)
+create_report.create_report(extension = "html", keep_code = True, notebookname =  notebookname)
 ```
 
 ```python
