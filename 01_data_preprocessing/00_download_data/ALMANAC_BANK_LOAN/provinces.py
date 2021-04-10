@@ -64,9 +64,12 @@ var_to_keep = [
 var = (
 var
 .reindex(columns = var_to_keep)
-.drop_duplicates()
+.drop_duplicates(subset = [
+"province_cn",
+"province_en",
+"year"])
 )
-
+var.shape
 ### SAVE LOCALLY
 input_path = os.path.join(parent_path,"00_data_catalog", "temporary_local_data",  FILENAME_SPREADSHEET + ".csv")
 var.to_csv(input_path, index = False)
