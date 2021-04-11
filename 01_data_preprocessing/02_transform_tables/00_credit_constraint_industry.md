@@ -1061,6 +1061,25 @@ output = s3.run_query(
 output
 ```
 
+Check if missing share big four in 2005 to 2007
+
+```python
+query_big = """
+SELECT year, COUNT(*) as count_missing
+FROM environment.fin_dep_pollution_baseline_industry 
+WHERE share_big_loan IS NULL
+GROUP BY year
+ORDER BY year
+"""
+output = s3.run_query(
+                    query=query_big,
+                    database=DatabaseName,
+                    s3_output=s3_output_example,
+    filename = 'count_{}'.format(table_name)
+                )
+output
+```
+
 # Validate query
 
 This step is mandatory to validate the query in the ETL. If you are not sure about the quality of the query, go to the next step.
