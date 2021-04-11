@@ -58,7 +58,13 @@ var_to_keep = [
 "total_short_term",
 "total_long_term_loan",
 "total_gdp",
-"metric"
+"metric",
+"cn_total_deposit",
+"cn_total_loan",
+"cn_total_bank_loan",
+"cn_total_short_term",
+"cn_total_long_term_loan",
+"cn_total_gdp"
 ]
 
 var = (
@@ -68,6 +74,7 @@ var
 "province_cn",
 "province_en",
 "year"])
+.replace(',','|', regex=True)
 )
 var.shape
 ### SAVE LOCALLY
@@ -91,7 +98,13 @@ schema = [
 {"Name":"total_short_term", "Type":"float", "Comment":"total Of which short-term loans 其中 短期贷款"},
 {"Name":"total_long_term_loan", "Type":"float", "Comment":"total Of Long-term loans 中长期贷款"},
 {"Name":"total_gdp", "Type":"float", "Comment":"GDP province "},
-{"Name":"metric", "Type":"string", "Comment":"metric display either 亿 or 万"}
+{"Name":"metric", "Type":"string", "Comment":"metric display either 亿 or 万"},
+{"Name":"cn_total_deposit", "Type":"string", "Comment":"Values in source spreadsheet"},
+{"Name":"cn_total_loan", "Type":"string", "Comment":"Values in source spreadsheet"},
+{"Name":"cn_total_bank_loan", "Type":"string", "Comment":"Values in source spreadsheet"},
+{"Name":"cn_total_short_term", "Type":"string", "Comment":"Values in source spreadsheet"},
+{"Name":"cn_total_long_term_loan", "Type":"string", "Comment":"Values in source spreadsheet"},
+{"Name":"cn_total_gdp", "Type":"string", "Comment":"Values in source spreadsheet"},
 ]
 
 ### ADD DESCRIPTION
