@@ -760,6 +760,9 @@ SELECT
   in_10_000_tonnes, 
   tfp_cit,
   credit_constraint,
+  financial_dep_us,
+  liquidity_need_us,
+  rd_intensity_us,
   1/supply_all_credit as supply_all_credit,
   1/supply_long_term_credit as supply_long_term_credit,
   share_big_bank_loan,
@@ -949,7 +952,10 @@ FROM
   LEFT JOIN (
     SELECT 
       cic, 
-      financial_dep_china AS credit_constraint 
+      financial_dep_china AS credit_constraint,
+      financial_dep_us,
+      liquidity_need_us,
+      rd_intensity_us 
     FROM 
       industry.china_credit_constraint
   ) as cred_constraint ON aggregate_pol.ind2 = cred_constraint.cic 
@@ -1235,6 +1241,9 @@ schema = [{'Name': 'year', 'Type': 'string', 'Comment': 'year from 2001 to 2007'
           {'Name': 'tfp_cit', 'Type': 'double', 'Comment': 'TFP at the city industry level. From https://github.com/thomaspernet/Financial_dependency_pollution/blob/master/01_data_preprocessing/02_transform_tables/05_tfp_computation.md#table-asif_tfp_firm_level'},
           {'Name': 'credit_constraint', 'Type': 'float',
            'Comment': 'Financial dependency. From paper https://www.sciencedirect.com/science/article/pii/S0147596715000311"'},
+          {'Name': 'financial_dep_us', 'Type': 'float', 'Comment': 'Financial dependency metric based on US data'},
+          {'Name': 'liquidity_need_us', 'Type': 'float', 'Comment': 'liquidity need metric based on US data'},
+          {'Name': 'rd_intensity_us', 'Type': 'float', 'Comment': 'RD intensity metric based on US data'},
           {'Name': 'supply_all_credit', 'Type': 'double',
            'Comment': 'province external supply of credit'},
           {'Name': 'supply_long_term_credit', 'Type': 'float',
