@@ -267,10 +267,15 @@ SELECT
   1 / supply_all_credit as supply_all_credit, 
   1 / supply_long_term_credit as supply_long_term_credit,
   share_big_bank_loan,
+  lag_share_big_bank_loan,
   share_big_loan,
+  lag_share_big_loan,
   credit_supply,
+  lag_credit_supply,
   credit_supply_long_term,
+  lag_credit_supply_long_term,
   credit_supply_short_term,
+  lag_credit_supply_short_term,
   output, 
   sales, 
   employment, 
@@ -534,7 +539,39 @@ FROM
       "policy"."china_spatial_relocation"
   ) as relocation ON aggregate_pol.geocode4_corr = relocation.geocode4_corr 
   LEFT JOIN (
-    SELECT 
+    SELECT year, province_en,
+  share_big_bank_loan,
+  LAG(share_big_bank_loan, 1) OVER (
+        PARTITION BY province_en
+        ORDER BY 
+          year
+      ) as lag_share_big_bank_loan,
+  share_big_loan,
+  LAG(share_big_loan, 1) OVER (
+        PARTITION BY province_en
+        ORDER BY 
+          year
+      ) as lag_share_big_loan,
+  credit_supply,
+  LAG(credit_supply, 1) OVER (
+        PARTITION BY province_en
+        ORDER BY 
+          year
+      ) as lag_credit_supply,
+  credit_supply_long_term,
+  LAG(credit_supply_long_term, 1) OVER (
+        PARTITION BY province_en
+        ORDER BY 
+          year
+      ) as lag_credit_supply_long_term,
+  credit_supply_short_term,
+  LAG(credit_supply_short_term, 1) OVER (
+        PARTITION BY province_en
+        ORDER BY 
+          year
+      ) as lag_credit_supply_short_term
+FROM (      
+SELECT 
       province_loan_and_credit.year, 
       province_loan_and_credit.province_en, 
       CAST(
@@ -566,6 +603,7 @@ FROM
       almanac_bank_china.bank_socb_loan 
       RIGHT JOIN almanac_bank_china.province_loan_and_credit ON bank_socb_loan.year = province_loan_and_credit.year 
       AND bank_socb_loan.province_en = province_loan_and_credit.province_en
+  )
   ) as credit ON aggregate_pol.year = credit.year 
   AND aggregate_pol.province_en = credit.province_en 
 WHERE 
@@ -576,6 +614,7 @@ WHERE
   and current_ratio > 0 
   and cashflow_to_tangible > 0 
   AND aggregate_pol.ind2 != '43' -- AND tfp_cit > 0
+ORDER BY ind2, cityen, year
 LIMIT 
   10
 
@@ -724,10 +763,15 @@ SELECT
   1/supply_all_credit as supply_all_credit,
   1/supply_long_term_credit as supply_long_term_credit,
   share_big_bank_loan,
+  lag_share_big_bank_loan,
   share_big_loan,
+  lag_share_big_loan,
   credit_supply,
+  lag_credit_supply,
   credit_supply_long_term,
+  lag_credit_supply_long_term,
   credit_supply_short_term,
+  lag_credit_supply_short_term,
   output,
   sales,
   employment,
@@ -996,7 +1040,39 @@ FROM "policy"."china_spatial_relocation"
     ) as relocation
     ON aggregate_pol.geocode4_corr = relocation.geocode4_corr
 LEFT JOIN (
-    SELECT 
+    SELECT year, province_en,
+  share_big_bank_loan,
+  LAG(share_big_bank_loan, 1) OVER (
+        PARTITION BY province_en
+        ORDER BY 
+          year
+      ) as lag_share_big_bank_loan,
+  share_big_loan,
+  LAG(share_big_loan, 1) OVER (
+        PARTITION BY province_en
+        ORDER BY 
+          year
+      ) as lag_share_big_loan,
+  credit_supply,
+  LAG(credit_supply, 1) OVER (
+        PARTITION BY province_en
+        ORDER BY 
+          year
+      ) as lag_credit_supply,
+  credit_supply_long_term,
+  LAG(credit_supply_long_term, 1) OVER (
+        PARTITION BY province_en
+        ORDER BY 
+          year
+      ) as lag_credit_supply_long_term,
+  credit_supply_short_term,
+  LAG(credit_supply_short_term, 1) OVER (
+        PARTITION BY province_en
+        ORDER BY 
+          year
+      ) as lag_credit_supply_short_term
+FROM (      
+SELECT 
       province_loan_and_credit.year, 
       province_loan_and_credit.province_en, 
       CAST(
@@ -1028,6 +1104,7 @@ LEFT JOIN (
       almanac_bank_china.bank_socb_loan 
       RIGHT JOIN almanac_bank_china.province_loan_and_credit ON bank_socb_loan.year = province_loan_and_credit.year 
       AND bank_socb_loan.province_en = province_loan_and_credit.province_en
+  )
   ) as credit ON aggregate_pol.year = credit.year 
   AND aggregate_pol.province_en = credit.province_en 
 WHERE 
@@ -1105,107 +1182,150 @@ glue.get_table_information(
 
 ```python
 schema = [{'Name': 'year', 'Type': 'string', 'Comment': 'year from 2001 to 2007'},
- {'Name': 'period', 'Type': 'varchar(5)', 'Comment': 'False if year before 2005 included, True if year 2006 and 2007'},
- {'Name': 'province_en', 'Type': 'string', 'Comment': ''},
- {'Name': 'cityen', 'Type': 'string', 'Comment': ''},
- {'Name': 'geocode4_corr', 'Type': 'string', 'Comment': ''},
- {'Name': 'tcz', 'Type': 'string', 'Comment': 'Two control zone policy city'},
- {'Name': 'spz', 'Type': 'string', 'Comment': 'Special policy zone policy city'},
- {'Name': 'ind2', 'Type': 'string', 'Comment': '2 digits industry'},
- {'Name': 'short', 'Type': 'string', 'Comment': ''},
- {'Name': 'polluted_d50i',
-        'Type': 'varchar(5)', 'Comment': 'Sectors with values above Yearly 50th percentile of SO2 label as ABOVE else BELOW'},
-    {'Name': 'polluted_d80i',
-        'Type': 'varchar(5)', 'Comment': 'Sectors with values above Yearly 80th percentile of SO2 label as ABOVE else BELOW'},
-    {'Name': 'polluted_d85i',
-        'Type': 'varchar(5)', 'Comment': 'Sectors with values above Yearly 85th percentile of SO2 label as ABOVE else BELOW'},
-    {'Name': 'polluted_d90i',
-        'Type': 'varchar(5)', 'Comment': 'Sectors with values above Yearly 90th percentile of SO2 label as ABOVE else BELOW'},
-    {'Name': 'polluted_d95i',
-        'Type': 'varchar(5)', 'Comment': 'Sectors with values above Yearly 95th percentile of SO2 label as ABOVE else BELOW'},
-    {'Name': 'polluted_mi',
-        'Type': 'varchar(5)', 'Comment': 'Sectors with values above Yearly average of SO2 label as ABOVE else BELOW'},
-    {'Name': 'polluted_d50_cit', 'Type': 'varchar(5)', 'Comment': 'Sectors with values above Yearly 50th percentile of SO2 label as ABOVE else BELOW'},
- {'Name': 'polluted_d80_cit', 'Type': 'varchar(5)', 'Comment': 'Sectors with values above Yearly 80th percentile of SO2 label as ABOVE else BELOW'},
- {'Name': 'polluted_d85_cit', 'Type': 'varchar(5)', 'Comment': 'Sectors with values above Yearly 85th percentile of SO2 label as ABOVE else BELOW'}, 
- {'Name': 'polluted_d90_cit', 'Type': 'varchar(5)', 'Comment': 'Sectors with values above Yearly 90th percentile of SO2 label as ABOVE else BELOW'},
- {'Name': 'polluted_d95_cit', 'Type': 'varchar(5)', 'Comment': 'Sectors with values above Yearly 95th percentile of SO2 label as ABOVE else BELOW'},         
- {'Name': 'polluted_m_cit', 'Type': 'varchar(5)', 'Comment': 'Sectors with values above Yearly average of SO2 label as ABOVE else BELOW'},
- {'Name': 'tso2', 'Type': 'bigint', 'Comment': 'Total so2 city sector. Filtered values above  4863 (5% of the distribution)'},
- {'Name': 'so2_intensity', 'Type': 'decimal(21,5)', 'Comment': 'SO2 divided by output'},
- {'Name': 'tso2_mandate_c', 'Type': 'float', 'Comment': 'city reduction mandate in tonnes'},
- {'Name': 'above_threshold_mandate',
-  'Type': 'map<double,boolean>',
-  'Comment': 'Policy mandate above percentile .5, .75, .9, .95'},
-  {'Name': 'avg_ij_o_city_mandate', 'Type': 'float', 'Comment': ''},
- {'Name': 'd_avg_ij_o_city_mandate', 'Type': 'string', 'Comment': ''},
- {'Name': 'above_average_mandate', 'Type': 'varchar(5)', 'Comment': 'Policy mandate above national average'},
- {'Name': 'in_10_000_tonnes', 'Type': 'float', 'Comment': 'city reduction mandate in 10k tonnes'},
- {'Name': 'tfp_cit', 'Type': 'double', 'Comment': 'TFP at the city industry level. From https://github.com/thomaspernet/Financial_dependency_pollution/blob/master/01_data_preprocessing/02_transform_tables/05_tfp_computation.md#table-asif_tfp_firm_level'},
-    {'Name': 'credit_constraint', 'Type': 'float',
-        'Comment': 'Financial dependency. From paper https://www.sciencedirect.com/science/article/pii/S0147596715000311"'},
-    {'Name': 'supply_all_credit', 'Type': 'double',
-        'Comment': 'province external supply of credit'},
-    {'Name': 'supply_long_term_credit', 'Type': 'float',
-        'Comment': 'province external supply of long term credit'},
- {'Name': 'share_big_bank_loan', 'Type': 'decimal(21,5)', 'Comment': 'share four State-owned commercial banks in total bank lending'},
- {'Name': 'share_big_loan', 'Type': 'decimal(21,5)', 'Comment': 'share four State-owned commercial banks in total lending'},
- {'Name': 'credit_supply', 'Type': 'decimal(21,5)', 'Comment': 'total bank lending normalised by gdp'},
- {'Name': 'credit_supply_long_term', 'Type': 'decimal(21,5)', 'Comment': 'total long term bank lending normalised by gdp'},
- {'Name': 'credit_supply_short_term', 'Type': 'decimal(21,5)', 'Comment': 'total short term bank lending normalised by gdp'},
- {'Name': 'output', 'Type': 'bigint', 'Comment': 'Output'},
- {'Name': 'sales', 'Type': 'bigint', 'Comment': 'Sales'},
- {'Name': 'employment', 'Type': 'bigint', 'Comment': 'Employemnt'},
- {'Name': 'capital', 'Type': 'bigint', 'Comment': 'Capital'},
- {'Name': 'current_asset', 'Type': 'bigint', 'Comment': 'current asset'},
- {'Name': 'tofixed', 'Type': 'bigint', 'Comment': 'total fixed asset'},
- {'Name': 'total_liabilities', 'Type': 'bigint', 'Comment': 'total liabilities'},
- {'Name': 'total_asset', 'Type': 'bigint', 'Comment': 'total asset'},
- {'Name': 'tangible', 'Type': 'bigint', 'Comment': 'tangible asset'},
- {'Name': 'cashflow', 'Type': 'bigint', 'Comment': 'cash flow'},
- {'Name': 'current_ratio', 'Type': 'decimal(21,5)', 'Comment': 'current ratio'},
- {'Name': 'lag_current_ratio', 'Type': 'decimal(21,5)', 'Comment': 'lag value of current ratio'},
- {'Name': 'liabilities_tot_asset', 'Type': 'decimal(21,5)', 'Comment': 'liabilities to total asset'},
- {'Name': 'sales_tot_asset', 'Type': 'decimal(21,5)', 'Comment': 'sales to total asset'},
- {'Name': 'lag_sales_tot_asset', 'Type': 'decimal(21,5)', 'Comment': 'lag value of sales to asset'},
- {'Name': 'asset_tangibility_tot_asset',
-  'Type': 'decimal(21,5)',
-  'Comment': 'asset tangibility tot total asset'},
- {'Name': 'lag_liabilities_tot_asset', 'Type': 'decimal(21,5)', 'Comment': 'Lag liabiliteies to total asset'},
- {'Name': 'cashflow_to_tangible', 'Type': 'decimal(21,5)', 'Comment': 'cash flow to tangible'},
- {'Name': 'lag_cashflow_to_tangible', 'Type': 'decimal(21,5)', 'Comment': 'lag cash flow to tangible'},
- {'Name': 'cashflow_tot_asset', 'Type': 'decimal(21,5)', 'Comment': 'Cash flow to total asset'},
- {'Name': 'lag_cashflow_tot_asset', 'Type': 'decimal(21,5)', 'Comment': 'lag cash flow tot total asset'},
- {'Name': 'return_to_sale', 'Type': 'decimal(21,5)', 'Comment': 'Return to sale'},
- {'Name': 'lag_return_to_sale', 'Type': 'decimal(21,5)', 'Comment': 'Lag return tot sale'},
- {'Name': 'lower_location', 'Type': 'string', 'Comment': ''},
- {'Name': 'larger_location', 'Type': 'string', 'Comment': ''},
- {'Name': 'coastal', 'Type': 'string', 'Comment': 'City is bordered by sea or not'},
-{'Name': 'dominated_output_soe_c', 'Type': 'boolean',
-        'Comment': 'SOE dominated city of output. If true, then SOEs dominated city'},
-    {'Name': 'dominated_employment_soe_c', 'Type': 'boolean',
-        'Comment': 'SOE dominated city of employment. If true, then SOEs dominated city'},
-    {'Name': 'dominated_sales_soe_c', 'Type': 'boolean',
-        'Comment': 'SOE dominated city of sales. If true, then SOEs dominated city'},
-    {'Name': 'dominated_capital_soe_c',
-        'Type': 'boolean',
-        'Comment': 'SOE dominated city of capital. If true, then SOEs dominated city'},
-    {'Name': 'dominated_output_for_c',
-        'Type': 'boolean',
-        'Comment': 'foreign dominated city of output. If true, then foreign dominated city'},
-    {'Name': 'dominated_employment_for_c',
-        'Type': 'boolean',
-        'Comment': 'foreign dominated city of employment. If true, then foreign dominated city'},
-    {'Name': 'dominated_sales_for_c', 'Type': 'boolean',
-        'Comment': 'foreign dominated cityof sales. If true, then foreign dominated city'},
-    {'Name': 'dominated_capital_for_c',
-        'Type': 'boolean',
-        'Comment': 'foreign dominated city of capital. If true, then foreign dominated city'},
-    {
-        "Name": "dominated_output_i",
-        "Type": "map<double,boolean>",
-        "Comment": "map with information dominated industry knowing percentile .5, .75, .9, .95 of output",
-    },
+          {'Name': 'period',
+              'Type': 'varchar(5)', 'Comment': 'False if year before 2005 included, True if year 2006 and 2007'},
+          {'Name': 'province_en', 'Type': 'string', 'Comment': ''},
+          {'Name': 'cityen', 'Type': 'string', 'Comment': ''},
+          {'Name': 'geocode4_corr', 'Type': 'string', 'Comment': ''},
+          {'Name': 'tcz', 'Type': 'string',
+              'Comment': 'Two control zone policy city'},
+          {'Name': 'spz', 'Type': 'string',
+              'Comment': 'Special policy zone policy city'},
+          {'Name': 'ind2', 'Type': 'string', 'Comment': '2 digits industry'},
+          {'Name': 'short', 'Type': 'string', 'Comment': ''},
+          {'Name': 'polluted_d50i',
+           'Type': 'varchar(5)', 'Comment': 'Sectors with values above Yearly 50th percentile of SO2 label as ABOVE else BELOW'},
+          {'Name': 'polluted_d80i',
+           'Type': 'varchar(5)', 'Comment': 'Sectors with values above Yearly 80th percentile of SO2 label as ABOVE else BELOW'},
+          {'Name': 'polluted_d85i',
+           'Type': 'varchar(5)', 'Comment': 'Sectors with values above Yearly 85th percentile of SO2 label as ABOVE else BELOW'},
+          {'Name': 'polluted_d90i',
+           'Type': 'varchar(5)', 'Comment': 'Sectors with values above Yearly 90th percentile of SO2 label as ABOVE else BELOW'},
+          {'Name': 'polluted_d95i',
+           'Type': 'varchar(5)', 'Comment': 'Sectors with values above Yearly 95th percentile of SO2 label as ABOVE else BELOW'},
+          {'Name': 'polluted_mi',
+           'Type': 'varchar(5)', 'Comment': 'Sectors with values above Yearly average of SO2 label as ABOVE else BELOW'},
+          {'Name': 'polluted_d50_cit',
+           'Type': 'varchar(5)', 'Comment': 'Sectors with values above Yearly 50th percentile of SO2 label as ABOVE else BELOW'},
+          {'Name': 'polluted_d80_cit',
+           'Type': 'varchar(5)', 'Comment': 'Sectors with values above Yearly 80th percentile of SO2 label as ABOVE else BELOW'},
+          {'Name': 'polluted_d85_cit',
+           'Type': 'varchar(5)', 'Comment': 'Sectors with values above Yearly 85th percentile of SO2 label as ABOVE else BELOW'},
+          {'Name': 'polluted_d90_cit',
+           'Type': 'varchar(5)', 'Comment': 'Sectors with values above Yearly 90th percentile of SO2 label as ABOVE else BELOW'},
+          {'Name': 'polluted_d95_cit',
+           'Type': 'varchar(5)', 'Comment': 'Sectors with values above Yearly 95th percentile of SO2 label as ABOVE else BELOW'},
+          {'Name': 'polluted_m_cit',
+           'Type': 'varchar(5)', 'Comment': 'Sectors with values above Yearly average of SO2 label as ABOVE else BELOW'},
+          {'Name': 'tso2', 'Type': 'bigint',
+           'Comment': 'Total so2 city sector. Filtered values above  4863 (5% of the distribution)'},
+          {'Name': 'so2_intensity',
+           'Type': 'decimal(21,5)', 'Comment': 'SO2 divided by output'},
+          {'Name': 'tso2_mandate_c', 'Type': 'float',
+           'Comment': 'city reduction mandate in tonnes'},
+          {'Name': 'above_threshold_mandate',
+           'Type': 'map<double,boolean>',
+           'Comment': 'Policy mandate above percentile .5, .75, .9, .95'},
+          {'Name': 'avg_ij_o_city_mandate', 'Type': 'float', 'Comment': ''},
+          {'Name': 'd_avg_ij_o_city_mandate', 'Type': 'string', 'Comment': ''},
+          {'Name': 'above_average_mandate',
+           'Type': 'varchar(5)', 'Comment': 'Policy mandate above national average'},
+          {'Name': 'in_10_000_tonnes', 'Type': 'float',
+           'Comment': 'city reduction mandate in 10k tonnes'},
+          {'Name': 'tfp_cit', 'Type': 'double', 'Comment': 'TFP at the city industry level. From https://github.com/thomaspernet/Financial_dependency_pollution/blob/master/01_data_preprocessing/02_transform_tables/05_tfp_computation.md#table-asif_tfp_firm_level'},
+          {'Name': 'credit_constraint', 'Type': 'float',
+           'Comment': 'Financial dependency. From paper https://www.sciencedirect.com/science/article/pii/S0147596715000311"'},
+          {'Name': 'supply_all_credit', 'Type': 'double',
+           'Comment': 'province external supply of credit'},
+          {'Name': 'supply_long_term_credit', 'Type': 'float',
+           'Comment': 'province external supply of long term credit'},
+          {'Name': 'share_big_bank_loan',
+           'Type': 'decimal(21,5)', 'Comment': 'share four State-owned commercial banks in total bank lending'},
+          {'Name': 'lag_share_big_bank_loan',
+           'Type': 'decimal(21,5)', 'Comment': 'lag share four State-owned commercial banks in total bank lending'},
+          {'Name': 'share_big_loan',
+           'Type': 'decimal(21,5)', 'Comment': 'share four State-owned commercial banks in total lending'},
+          {'Name': 'lag_share_big_loan',
+           'Type': 'decimal(21,5)', 'Comment': 'lag share four State-owned commercial banks in total lending'},
+          {'Name': 'credit_supply',
+           'Type': 'decimal(21,5)', 'Comment': 'total bank lending normalised by gdp'},
+          {'Name': 'lag_credit_supply',
+           'Type': 'decimal(21,5)', 'Comment': 'lag total bank lending normalised by gdp'},
+          {'Name': 'credit_supply_long_term',
+           'Type': 'decimal(21,5)', 'Comment': 'total long term bank lending normalised by gdp'},
+          {'Name': 'lag_credit_supply_long_term',
+           'Type': 'decimal(21,5)', 'Comment': 'lag total long term bank lending normalised by gdp'},
+          {'Name': 'credit_supply_short_term',
+           'Type': 'decimal(21,5)', 'Comment': 'total short term bank lending normalised by gdp'},
+          {'Name': 'lag_credit_supply_short_term',
+           'Type': 'decimal(21,5)', 'Comment': 'lag total short term bank lending normalised by gdp'},
+          {'Name': 'output', 'Type': 'bigint', 'Comment': 'Output'},
+          {'Name': 'sales', 'Type': 'bigint', 'Comment': 'Sales'},
+          {'Name': 'employment', 'Type': 'bigint', 'Comment': 'Employemnt'},
+          {'Name': 'capital', 'Type': 'bigint', 'Comment': 'Capital'},
+          {'Name': 'current_asset', 'Type': 'bigint', 'Comment': 'current asset'},
+          {'Name': 'tofixed', 'Type': 'bigint', 'Comment': 'total fixed asset'},
+          {'Name': 'total_liabilities', 'Type': 'bigint',
+              'Comment': 'total liabilities'},
+          {'Name': 'total_asset', 'Type': 'bigint', 'Comment': 'total asset'},
+          {'Name': 'tangible', 'Type': 'bigint', 'Comment': 'tangible asset'},
+          {'Name': 'cashflow', 'Type': 'bigint', 'Comment': 'cash flow'},
+          {'Name': 'current_ratio',
+           'Type': 'decimal(21,5)', 'Comment': 'current ratio'},
+          {'Name': 'lag_current_ratio',
+           'Type': 'decimal(21,5)', 'Comment': 'lag value of current ratio'},
+          {'Name': 'liabilities_tot_asset',
+           'Type': 'decimal(21,5)', 'Comment': 'liabilities to total asset'},
+          {'Name': 'sales_tot_asset',
+           'Type': 'decimal(21,5)', 'Comment': 'sales to total asset'},
+          {'Name': 'lag_sales_tot_asset',
+           'Type': 'decimal(21,5)', 'Comment': 'lag value of sales to asset'},
+          {'Name': 'asset_tangibility_tot_asset',
+           'Type': 'decimal(21,5)',
+           'Comment': 'asset tangibility tot total asset'},
+          {'Name': 'lag_liabilities_tot_asset',
+           'Type': 'decimal(21,5)', 'Comment': 'Lag liabiliteies to total asset'},
+          {'Name': 'cashflow_to_tangible',
+           'Type': 'decimal(21,5)', 'Comment': 'cash flow to tangible'},
+          {'Name': 'lag_cashflow_to_tangible',
+           'Type': 'decimal(21,5)', 'Comment': 'lag cash flow to tangible'},
+          {'Name': 'cashflow_tot_asset',
+           'Type': 'decimal(21,5)', 'Comment': 'Cash flow to total asset'},
+          {'Name': 'lag_cashflow_tot_asset',
+           'Type': 'decimal(21,5)', 'Comment': 'lag cash flow tot total asset'},
+          {'Name': 'return_to_sale',
+           'Type': 'decimal(21,5)', 'Comment': 'Return to sale'},
+          {'Name': 'lag_return_to_sale',
+           'Type': 'decimal(21,5)', 'Comment': 'Lag return tot sale'},
+          {'Name': 'lower_location', 'Type': 'string', 'Comment': ''},
+          {'Name': 'larger_location', 'Type': 'string', 'Comment': ''},
+          {'Name': 'coastal', 'Type': 'string',
+           'Comment': 'City is bordered by sea or not'},
+          {'Name': 'dominated_output_soe_c', 'Type': 'boolean',
+           'Comment': 'SOE dominated city of output. If true, then SOEs dominated city'},
+          {'Name': 'dominated_employment_soe_c', 'Type': 'boolean',
+           'Comment': 'SOE dominated city of employment. If true, then SOEs dominated city'},
+          {'Name': 'dominated_sales_soe_c', 'Type': 'boolean',
+           'Comment': 'SOE dominated city of sales. If true, then SOEs dominated city'},
+          {'Name': 'dominated_capital_soe_c',
+           'Type': 'boolean',
+           'Comment': 'SOE dominated city of capital. If true, then SOEs dominated city'},
+          {'Name': 'dominated_output_for_c',
+           'Type': 'boolean',
+           'Comment': 'foreign dominated city of output. If true, then foreign dominated city'},
+          {'Name': 'dominated_employment_for_c',
+           'Type': 'boolean',
+           'Comment': 'foreign dominated city of employment. If true, then foreign dominated city'},
+          {'Name': 'dominated_sales_for_c', 'Type': 'boolean',
+           'Comment': 'foreign dominated cityof sales. If true, then foreign dominated city'},
+          {'Name': 'dominated_capital_for_c',
+           'Type': 'boolean',
+           'Comment': 'foreign dominated city of capital. If true, then foreign dominated city'},
+          {
+    "Name": "dominated_output_i",
+    "Type": "map<double,boolean>",
+    "Comment": "map with information dominated industry knowing percentile .5, .75, .9, .95 of output",
+},
     {"Name": "dominated_employment_i", "Type": "map<double,boolean>",
         "Comment": "map with information on dominated industry knowing percentile .5, .75, .9, .95 of employment"},
     {"Name": "dominated_capital_i", "Type": "map<double,boolean>",
@@ -1216,42 +1336,42 @@ schema = [{'Name': 'year', 'Type': 'string', 'Comment': 'year from 2001 to 2007'
         "Name": "dominated_output_soe_i",
         "Type": "map<double,boolean>",
         "Comment": "map with information on SOE dominated industry knowing percentile .5, .75, .9, .95 of output",
-    },
+},
     {
         "Name": "dominated_employment_soe_i",
         "Type": "map<double,boolean>",
         "Comment": "map with information on SOE dominated industry knowing percentile .5, .75, .9, .95 of employment",
-    },
+},
     {
         "Name": "dominated_sales_soe_i",
         "Type": "map<double,boolean>",
         "Comment": "map with information on SOE dominated industry knowing percentile .5, .75, .9, .95 of sales",
-    },
+},
     {
         "Name": "dominated_capital_soe_i",
         "Type": "map<double,boolean>",
         "Comment": "map with information on SOE dominated industry knowing percentile .5, .75, .9, .95 of capital",
-    },
+},
     {
         "Name": "dominated_output_for_i",
         "Type": "map<double,boolean>",
         "Comment": "map with information on foreign dominated industry knowing percentile .5, .75, .9, .95 of output",
-    },
+},
     {
         "Name": "dominated_employment_for_i",
         "Type": "map<double,boolean>",
         "Comment": "map with information on foreign dominated industry knowing percentile .5, .75, .9, .95 of employment",
-    },
+},
     {
         "Name": "dominated_sales_for_i",
         "Type": "map<double,boolean>",
         "Comment": "map with information on foreign dominated industry knowing percentile .5, .75, .9, .95 of sales",
-    },
+},
     {
         "Name": "dominated_capital_for_i",
         "Type": "map<double,boolean>",
         "Comment": "map with information on foreign dominated industry knowing percentile .5, .75, .9, .95 of capital",
-    },
+},
     {"Name": "fe_c_i", "Type": "bigint", "Comment": "City industry fixed effect"},
     {"Name": "fe_t_i", "Type": "bigint", "Comment": "year industry fixed effect"},
     {"Name": "fe_c_t", "Type": "bigint", "Comment": "city industry fixed effect"}]
