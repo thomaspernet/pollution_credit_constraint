@@ -38,7 +38,7 @@ drive = connect_drive.drive_operations(gd_auth)
 ### DOWNLOAD SPREADSHEET TO temporary_local_data folder
 FILENAME_SPREADSHEET = "ALMANAC_BANK_LOAN"
 spreadsheet_id = drive.find_file_id(FILENAME_SPREADSHEET, to_print=False)
-sheetName = 'DATA_BANKS'
+sheetName = 'DATA_BANK'
 var = (
     drive.upload_data_from_spreadsheet(
         sheetID=spreadsheet_id,
@@ -48,31 +48,18 @@ var = (
 
 ### READ DATA
 var_to_keep = [
-"year",
-"abc_doc",
-"icbc_doc",
-"ccb_doc",
-"boc_doc",
-"province_cn",
+"bank",
+"province",
 "province_en",
-"abc_loan",
-"icbc_loan",
-"ccb_loan",
-"boc_loan",
-"total_loan_big_four",
-"abc_metric",
-"icbc_metric",
-"ccb_metric",
-"boc_metric"
+"url",
+"year",
+"loan",
+"metrics"
 ]
 
 var = (
 var
 .reindex(columns = var_to_keep)
-.drop_duplicates(subset = [
-"province_cn",
-"province_en",
-"year"])
 )
 var.head()
 
@@ -88,22 +75,13 @@ s3.upload_file(input_path, PATH_S3)
 #    print({"Name":i, "Type":"string", "Comment":""})
 ### ADD SHCEMA
 schema = [
-{'Name': 'year', 'Type': 'string', 'Comment': 'year'},
-{'Name': 'abc_doc', 'Type': 'string', 'Comment': 'google drive source file for abc'},
-{'Name': 'icbc_doc', 'Type': 'string', 'Comment': 'google drive source file for icbc'},
-{'Name': 'ccb_doc', 'Type': 'string', 'Comment': 'google drive source file for ccb'},
-{'Name': 'boc_doc', 'Type': 'string', 'Comment': 'google drive source file for boc'},
+{'Name': 'bank', 'Type': 'string', 'Comment': 'Chinese bank 中国农业 中国工商 中国建设 or 中国银行'},
 {"Name":"province_cn", "Type":"string", "Comment":"province chinese name"},
 {"Name":"province_en", "Type":"string", "Comment":"province english name"},
-{'Name': 'abc_loan', 'Type': 'float', 'Comment': 'loan by abc 中国农业发展银行各地区贷款余额 in 亿'},
-{'Name': 'icbc_loan', 'Type': 'float', 'Comment': 'loan by icbc 中国工商银行各地区人民币存款贷款余额 各项贷款合计 in 亿'},
-{'Name': 'ccb_loan', 'Type': 'float', 'Comment': 'loan by ccb 中国建设银行各地区人民币存款 贷款余额 各项贷款合计 in 亿'},
-{'Name': 'boc_loan', 'Type': 'float', 'Comment': 'loan by boc 中国银行各地区人民币存款贷款余额 各项贷款合计 in 亿'},
-{'Name': 'total_loan_big_four', 'Type': 'float', 'Comment': 'abc_loan + icbc_loan + ccb_loan + boc_loan'},
-{'Name': 'abc_metric', 'Type': 'string', 'Comment': 'metric display either 亿 or 万'},
-{'Name': 'icbc_metric', 'Type': 'string', 'Comment': 'metric display either 亿 or 万'},
-{'Name': 'ccb_metric', 'Type': 'string', 'Comment': 'metric display either 亿 or 万'},
-{'Name': 'boc_metric', 'Type': 'string', 'Comment': 'metric display either 亿 or 万'}
+{'Name': 'url', 'Type': 'string', 'Comment': 'google drive source file'},
+{'Name': 'year', 'Type': 'string', 'Comment': 'Year of the loan'},
+{'Name': 'loan', 'Type': 'float', 'Comment': 'loan in 亿'},
+{'Name': 'metrics', 'Type': 'string', 'Comment': 'metric display either 亿 or 万'}
 
 ]
 
