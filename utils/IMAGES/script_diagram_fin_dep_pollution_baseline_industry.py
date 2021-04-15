@@ -16,14 +16,13 @@ with Diagram("FIN DEP POLLUTION BASELINE INDUSTRY", show=False, filename="/home/
      temp_7 = S3('china_sector_pollution_threshold')
      temp_8 = S3('china_city_sector_year_pollution_threshold')
      temp_9 = S3('china_credit_constraint')
-     temp_10 = S3('asif_tfp_firm_level')
-     temp_11 = S3('asif_firms_prepared')
-     temp_12 = S3('asif_industry_characteristics_ownership')
-     temp_13 = S3('asif_city_characteristics_ownership')
-     temp_14 = S3('province_credit_constraint')
-     temp_15 = S3('china_spatial_relocation')
+     temp_10 = S3('asif_firms_prepared')
+     temp_11 = S3('asif_industry_characteristics_ownership')
+     temp_12 = S3('asif_city_characteristics_ownership')
+     temp_13 = S3('province_credit_constraint')
+     temp_14 = S3('china_spatial_relocation')
+     temp_15 = S3('province_loan_and_credit')
      temp_16 = S3('bank_socb_loan')
-     temp_17 = S3('province_loan_and_credit')
 
      with Cluster("FINAL"):
 
@@ -46,4 +45,3 @@ with Diagram("FIN DEP POLLUTION BASELINE INDUSTRY", show=False, filename="/home/
      temp_final_0 << temp_14
      temp_final_0 << temp_15
      temp_final_0 << temp_16
-     temp_final_0 << temp_17

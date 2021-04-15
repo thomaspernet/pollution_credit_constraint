@@ -36,24 +36,15 @@
 - Partitition: []
 - Script: https://github.com/thomaspernet/pollution_credit_constraint/01_data_preprocessing/00_download_data/ALMANAC_BANK_LOAN/socb_loan.py
 
-|    | Name                | Type   | Comment                                                              |
-|---:|:--------------------|:-------|:---------------------------------------------------------------------|
-|  0 | year                | string | year                                                                 |
-|  1 | abc_doc             | string | google drive source file for abc                                     |
-|  2 | icbc_doc            | string | google drive source file for icbc                                    |
-|  3 | ccb_doc             | string | google drive source file for ccb                                     |
-|  4 | boc_doc             | string | google drive source file for boc                                     |
-|  5 | province_cn         | string | province chinese name                                                |
-|  6 | province_en         | string | province english name                                                |
-|  7 | abc_loan            | float  | loan by abc 中国农业发展银行各地区贷款余额 in 亿                     |
-|  8 | icbc_loan           | float  | loan by icbc 中国工商银行各地区人民币存款贷款余额 各项贷款合计 in 亿 |
-|  9 | ccb_loan            | float  | loan by ccb 中国建设银行各地区人民币存款 贷款余额 各项贷款合计 in 亿 |
-| 10 | boc_loan            | float  | loan by boc 中国银行各地区人民币存款贷款余额 各项贷款合计 in 亿      |
-| 11 | total_loan_big_four | float  | abc_loan + icbc_loan + ccb_loan + boc_loan                           |
-| 12 | abc_metric          | string | metric display either 亿 or 万                                       |
-| 13 | icbc_metric         | string | metric display either 亿 or 万                                       |
-| 14 | ccb_metric          | string | metric display either 亿 or 万                                       |
-| 15 | boc_metric          | string | metric display either 亿 or 万                                       |
+|    | Name        | Type   | Comment                                             |
+|---:|:------------|:-------|:----------------------------------------------------|
+|  0 | bank        | string | Chinese bank 中国农业 中国工商 中国建设 or 中国银行 |
+|  1 | province_cn | string | province chinese name                               |
+|  2 | province_en | string | province english name                               |
+|  3 | url         | string | google drive source file                            |
+|  4 | year        | string | Year of the loan                                    |
+|  5 | loan        | float  | loan in 亿                                          |
+|  6 | metrics     | string | metric display either 亿 or 万                      |
 
     
 
@@ -64,25 +55,25 @@
 - Partitition: []
 - Script: https://github.com/thomaspernet/pollution_credit_constraint/01_data_preprocessing/00_download_data/ALMANAC_BANK_LOAN/provinces.py
 
-|    | Name                    | Type   | Comment                                                                     |
-|---:|:------------------------|:-------|:----------------------------------------------------------------------------|
-|  0 | province_cn             | string | province chinese name                                                       |
-|  1 | province_en             | string | province english name                                                       |
-|  2 | url                     | string | google drive source file                                                    |
-|  3 | year                    | string | year                                                                        |
-|  4 | total_deposit           | float  | All deposits of financial institutions (balance) 全部金融机构各项存款(余额) |
-|  5 | total_loan              | float  | All financial institutions loans (balance) 全部金融机构各项贷款(余额)       |
-|  6 | total_bank_loan         | float  | Bank loan 银行贷款                                                          |
-|  7 | total_short_term        | float  | total Of which short-term loans 其中 短期贷款                               |
-|  8 | total_long_term_loan    | float  | total Of Long-term loans 中长期贷款                                         |
-|  9 | total_gdp               | float  | GDP province                                                                |
-| 10 | metric                  | string | metric display either 亿 or 万                                              |
-| 11 | cn_total_deposit        | string | Values in source spreadsheet                                                |
-| 12 | cn_total_loan           | string | Values in source spreadsheet                                                |
-| 13 | cn_total_bank_loan      | string | Values in source spreadsheet                                                |
-| 14 | cn_total_short_term     | string | Values in source spreadsheet                                                |
-| 15 | cn_total_long_term_loan | string | Values in source spreadsheet                                                |
-| 16 | cn_total_gdp            | string | Values in source spreadsheet                                                |
+|    | Name                    | Type   | Comment                                          |
+|---:|:------------------------|:-------|:-------------------------------------------------|
+|  0 | province_cn             | string | province chinese name                            |
+|  1 | province_en             | string | province english name                            |
+|  2 | url                     | string | google drive source file                         |
+|  3 | year                    | string | year                                             |
+|  4 | cn_total_deposit        | string | Chinese character to match total deposit         |
+|  5 | cn_total_loan           | string | Chinese character to match total loan            |
+|  6 | cn_total_bank_loan      | string | Chinese character to match total bank loan       |
+|  7 | cn_total_short_term     | string | Chinese character to match total short term loan |
+|  8 | cn_total_long_term_loan | string | Chinese character to match total long term loan  |
+|  9 | cn_total_gdp            | string | Chinese character to match total gdp             |
+| 10 | total_deposit           | float  | total deposit                                    |
+| 11 | total_loan              | float  | total loan                                       |
+| 12 | total_bank_loan         | float  | total bank loan                                  |
+| 13 | total_short_term        | float  | total short term loan                            |
+| 14 | total_long_term_loan    | float  | total long term loan                             |
+| 15 | total_gdp               | float  | total gdp                                        |
+| 16 | metric                  | string | metric                                           |
 
     
 

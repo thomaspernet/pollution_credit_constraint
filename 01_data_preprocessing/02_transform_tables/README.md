@@ -17,14 +17,13 @@ variables. Based on https://github.com/thomaspernet/Financial_dependency_polluti
         * [china_sector_pollution_threshold](None): None
         * [china_city_sector_year_pollution_threshold](None): None
         * [china_credit_constraint](None): None
-        * [asif_tfp_firm_level](None): None
         * [asif_firms_prepared](None): None
         * [asif_industry_characteristics_ownership](None): None
         * [asif_city_characteristics_ownership](None): None
         * [province_credit_constraint](None): None
         * [china_spatial_relocation](https://github.com/thomaspernet/pollution_credit_constraint/01_data_preprocessing/00_download_data/TARGET_SO2/china_cities_target_so2.py): Use the spreadsheet to download spatia relocation data. In the spreadsheet, construct the dummy as in the notebook to avoid computing it with Athena
-        * [bank_socb_loan](https://github.com/thomaspernet/pollution_credit_constraint/01_data_preprocessing/00_download_data/ALMANAC_BANK_LOAN/socb_loan.py): Download socb loan
         * [province_loan_and_credit](https://github.com/thomaspernet/pollution_credit_constraint/01_data_preprocessing/00_download_data/ALMANAC_BANK_LOAN/provinces.py): Download province loan and deposit data
+        * [bank_socb_loan](https://github.com/thomaspernet/pollution_credit_constraint/01_data_preprocessing/00_download_data/ALMANAC_BANK_LOAN/socb_loan.py): Download socb loan
 
 ### ETL diagrams
 
