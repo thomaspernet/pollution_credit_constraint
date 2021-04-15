@@ -171,503 +171,6 @@ s3_output_example = 'SQL_OUTPUT_ATHENA'
 ```python
 query= """
 WITH aggregate_pol AS (
-  SELECT 
-    year, 
-    geocode4_corr, 
-    province_en, 
-    cityen, 
-    -- indus_code AS cic,
-    ind2, 
-    SUM(tso2) as tso2, 
-    lower_location, 
-    larger_location, 
-    coastal 
-  FROM 
-    (
-      SELECT 
-        year, 
-        province_en, 
-        citycode, 
-        geocode4_corr, 
-        china_city_sector_pollution.cityen, 
-        --indus_code,
-        ind2, 
-        tso2, 
-        lower_location, 
-        larger_location, 
-        coastal 
-      FROM 
-        environment.china_city_sector_pollution 
-        INNER JOIN (
-          SELECT 
-            extra_code, 
-            geocode4_corr, 
-            province_en 
-          FROM 
-            chinese_lookup.china_city_code_normalised 
-          GROUP BY 
-            extra_code, 
-            geocode4_corr, 
-            province_en
-        ) as no_dup_citycode ON china_city_sector_pollution.citycode = no_dup_citycode.extra_code
-    ) 
-  GROUP BY 
-    year, 
-    province_en, 
-    geocode4_corr, 
-    cityen, 
-    --indus_code,
-    ind2, 
-    lower_location, 
-    larger_location, 
-    coastal
-) 
-SELECT 
-  aggregate_pol.year, 
-  CASE WHEN aggregate_pol.year in (
-    '2001', '2002', '2003', '2004', '2005'
-  ) THEN 'FALSE' WHEN aggregate_pol.year in ('2006', '2007') THEN 'TRUE' END AS period, 
-  aggregate_pol.province_en, 
-  cityen, 
-  aggregate_pol.geocode4_corr, 
-  CASE WHEN tcz IS NULL THEN '0' ELSE tcz END AS tcz, 
-  CASE WHEN spz IS NULL 
-  OR spz = '#N/A' THEN '0' ELSE spz END AS spz, 
-  --aggregate_pol.cic, 
-  aggregate_pol.ind2, 
-  CASE WHEN short IS NULL THEN 'Unknown' ELSE short END AS short, 
-  polluted_d50i, 
-  polluted_d75i, 
-  polluted_d80i, 
-  polluted_d85i, 
-  polluted_d90i, 
-  polluted_d95i, 
-  polluted_mi, 
-  polluted_d50_cit, 
-  polluted_d75_cit, 
-  polluted_d80_cit, 
-  polluted_d85_cit, 
-  polluted_d90_cit, 
-  polluted_d95_cit, 
-  polluted_m_cit, 
-  tso2, 
-  CAST(
-    tso2 AS DECIMAL(16, 5)
-  ) / CAST(
-    output AS DECIMAL(16, 5)
-  ) AS so2_intensity, 
-  tso2_mandate_c, 
-  above_threshold_mandate, 
-  above_average_mandate, 
-  avg_ij_o_city_mandate, 
-  CASE WHEN d_avg_ij_o_city_mandate IS NULL THEN 'FALSE' ELSE d_avg_ij_o_city_mandate END AS d_avg_ij_o_city_mandate, 
-  in_10_000_tonnes, 
-  tfp_cit, 
-  credit_constraint, 
-  1 / supply_all_credit as supply_all_credit, 
-  1 / supply_long_term_credit as supply_long_term_credit,
-  share_big_bank_loan,
-  lag_share_big_bank_loan,
-  share_big_loan,
-  lag_share_big_loan,
-  credit_supply,
-  lag_credit_supply,
-  credit_supply_long_term,
-  lag_credit_supply_long_term,
-  credit_supply_short_term,
-  lag_credit_supply_short_term,
-  output, 
-  sales, 
-  employment, 
-  capital, 
-  current_asset, 
-  tofixed, 
-  total_liabilities, 
-  total_asset, 
-  tangible, 
-  cashflow, 
-  current_ratio, 
-  lag_current_ratio, 
-  liabilities_tot_asset, 
-  sales_tot_asset, 
-  lag_sales_tot_asset, 
-  asset_tangibility_tot_asset, 
-  lag_liabilities_tot_asset, 
-  cashflow_to_tangible, 
-  lag_cashflow_to_tangible, 
-  cashflow_tot_asset, 
-  lag_cashflow_tot_asset, 
-  return_to_sale, 
-  lag_return_to_sale, 
-  lower_location, 
-  larger_location, 
-  coastal, 
-  dominated_output_soe_c, 
-  dominated_employment_soe_c, 
-  dominated_sales_soe_c, 
-  dominated_capital_soe_c, 
-  dominated_output_for_c, 
-  dominated_employment_for_c, 
-  dominated_sales_for_c, 
-  dominated_capital_for_c, 
-  dominated_output_i, 
-  dominated_employ_i, 
-  dominated_sales_i, 
-  dominated_capital_i, 
-  dominated_output_soe_i, 
-  dominated_employment_soe_i, 
-  dominated_sales_soe_i, 
-  dominated_capital_soe_i, 
-  dominated_output_for_i, 
-  dominated_employment_for_i, 
-  dominated_sales_for_i, 
-  dominated_capital_for_i, 
-  DENSE_RANK() OVER (
-    ORDER BY 
-      city_mandate.geocode4_corr, 
-      aggregate_pol.ind2
-  ) AS fe_c_i, 
-  DENSE_RANK() OVER (
-    ORDER BY 
-      aggregate_pol.year, 
-      aggregate_pol.ind2
-  ) AS fe_t_i, 
-  DENSE_RANK() OVER (
-    ORDER BY 
-      city_mandate.geocode4_corr, 
-      aggregate_pol.year
-  ) AS fe_c_t 
-FROM 
-  aggregate_pol 
-  INNER JOIN (
-    SELECT 
-      indu_2, 
-      current_asset, 
-      tofixed, 
-      total_liabilities, 
-      total_asset, 
-      tangible, 
-      cashflow, 
-      current_ratio, 
-      lag_current_ratio, 
-      liabilities_tot_asset, 
-      sales_tot_asset, 
-      lag_sales_tot_asset, 
-      asset_tangibility_tot_asset, 
-      lag_liabilities_tot_asset, 
-      cashflow_to_tangible, 
-      lag_cashflow_to_tangible, 
-      cashflow_tot_asset, 
-      lag_cashflow_tot_asset, 
-      return_to_sale, 
-      lag_return_to_sale 
-    FROM 
-      firms_survey.asif_industry_financial_ratio_industry 
-    WHERE 
-      year = '2002'
-  ) AS asif_industry_financial_ratio_industry ON aggregate_pol.ind2 = asif_industry_financial_ratio_industry.indu_2 
-  INNER JOIN (
-    SELECT 
-      geocode4_corr, 
-      tso2_mandate_c, 
-      in_10_000_tonnes, 
-      MAP(
-        ARRAY[.5, 
-        .75, 
-        .90, 
-        .95 ], 
-        zip_with(
-          transform(
-            sequence(1, 4), 
-            x -> tso2_mandate_c
-          ), 
-          tso2_mandate_c_pct, 
-          (x, y) -> x < y
-        )
-      ) AS above_threshold_mandate, 
-      CASE WHEN tso2_mandate_c > tso2_mandate_c_avg THEN 'ABOVE' ELSE 'BELOW' END AS above_average_mandate 
-    FROM 
-      (
-        (
-          SELECT 
-            'TEMP' as temp, 
-            approx_percentile(
-              tso2_mandate_c, ARRAY[.5,.75,.90, 
-              .95]
-            ) AS tso2_mandate_c_pct, 
-            AVG(tso2_mandate_c) AS tso2_mandate_c_avg 
-          FROM 
-            policy.china_city_reduction_mandate
-        ) as percentile 
-        LEFT JOIN (
-          SELECT 
-            'TEMP' as temp, 
-            citycn, 
-            tso2_mandate_c, 
-            in_10_000_tonnes 
-          FROM 
-            policy.china_city_reduction_mandate
-        ) as mandate ON percentile.temp = mandate.temp
-      ) as map_mandate 
-      INNER JOIN chinese_lookup.china_city_code_normalised ON map_mandate.citycn = china_city_code_normalised.citycn 
-    WHERE 
-      extra_code = geocode4_corr
-  ) as city_mandate ON aggregate_pol.geocode4_corr = city_mandate.geocode4_corr 
-  LEFT JOIN policy.china_city_tcz_spz ON aggregate_pol.geocode4_corr = china_city_tcz_spz.geocode4_corr 
-  LEFT JOIN chinese_lookup.ind_cic_2_name ON aggregate_pol.ind2 = ind_cic_2_name.cic 
-  LEFT JOIN (
-    SELECT 
-      ind2, 
-      year, 
-      polluted_d50i, 
-      polluted_d75i, 
-      polluted_d80i, 
-      polluted_d85i, 
-      polluted_d90i, 
-      polluted_d95i, 
-      polluted_mi 
-    FROM 
-      "environment"."china_sector_pollution_threshold"
-  ) as polluted_sector ON aggregate_pol.ind2 = polluted_sector.ind2 
-  and aggregate_pol.year = polluted_sector.year 
-  LEFT JOIN (
-    SELECT 
-      ind2, 
-      year, 
-      geocode4_corr, 
-      polluted_d50_cit, 
-      polluted_d75_cit, 
-      polluted_d80_cit, 
-      polluted_d85_cit, 
-      polluted_d90_cit, 
-      polluted_d95_cit, 
-      polluted_m_cit 
-    FROM 
-      "environment"."china_city_sector_year_pollution_threshold"
-  ) as polluted_sector_cit ON aggregate_pol.ind2 = polluted_sector_cit.ind2 
-  and aggregate_pol.year = polluted_sector_cit.year 
-  and aggregate_pol.geocode4_corr = polluted_sector_cit.geocode4_corr 
-  LEFT JOIN (
-    SELECT 
-      cic, 
-      financial_dep_china AS credit_constraint 
-    FROM 
-      industry.china_credit_constraint
-  ) as cred_constraint ON aggregate_pol.ind2 = cred_constraint.cic 
-  LEFT JOIN (
-    SELECT 
-      year, 
-      geocode4_corr, 
-      indu_2, 
-      -- cic, 
-      SUM(output) AS output, 
-      SUM(employ) AS employment, 
-      SUM(captal) AS capital, 
-      SUM(sales) as sales, 
-      --SUM(toasset) as toasset,
-      AVG(tfp_op) as tfp_cit 
-    FROM 
-      (
-        SELECT 
-          asif_city.firm, 
-          tfp_op, 
-          asif_city.year, 
-          asif_city.geocode4_corr, 
-          asif_tfp_firm_level.indu_2, 
-          -- asif_city.cic
-          asif_city.output, 
-          asif_city.employ, 
-          asif_city.captal, 
-          asif_city.sales --asif_city.toasset 
-        FROM 
-          firms_survey.asif_tfp_firm_level 
-          RIGHT JOIN (
-            SELECT 
-              firm, 
-              year, 
-              geocode4_corr, 
-              -- cic,
-              CASE WHEN LENGTH(cic) = 4 THEN substr(cic, 1, 2) ELSE concat(
-                '0', 
-                substr(cic, 1, 1)
-              ) END AS indu_2, 
-              output, 
-              employ, 
-              captal, 
-              sales, 
-              toasset 
-            FROM 
-              firms_survey.asif_firms_prepared 
-              INNER JOIN (
-                SELECT 
-                  extra_code, 
-                  geocode4_corr 
-                FROM 
-                  chinese_lookup.china_city_code_normalised 
-                GROUP BY 
-                  extra_code, 
-                  geocode4_corr
-              ) as no_dup_citycode ON asif_firms_prepared.citycode = no_dup_citycode.extra_code
-          ) as asif_city ON asif_tfp_firm_level.firm = asif_city.firm 
-          and asif_tfp_firm_level.year = asif_city.year 
-          and asif_tfp_firm_level.indu_2 = asif_city.indu_2 
-          and asif_tfp_firm_level.geocode4_corr = asif_city.geocode4_corr
-      ) 
-    WHERE 
-      year in (
-        '2001', '2002', '2003', '2004', '2005', 
-        '2006', '2007'
-      ) 
-    GROUP BY 
-      geocode4_corr, 
-      indu_2, 
-      -- cic, 
-      year
-  ) as agg_output ON aggregate_pol.geocode4_corr = agg_output.geocode4_corr -- AND aggregate_pol.cic = agg_output.cic 
-  AND aggregate_pol.ind2 = agg_output.indu_2 
-  AND aggregate_pol.year = agg_output.year 
-  LEFT JOIN firms_survey.asif_industry_characteristics_ownership ON aggregate_pol.geocode4_corr = asif_industry_characteristics_ownership.geocode4_corr 
-  AND aggregate_pol.ind2 = asif_industry_characteristics_ownership.indu_2 
-  LEFT JOIN firms_survey.asif_city_characteristics_ownership ON aggregate_pol.geocode4_corr = asif_city_characteristics_ownership.geocode4_corr 
-  LEFT JOIN chinese_lookup.province_credit_constraint ON aggregate_pol.province_en = province_credit_constraint.Province 
-  LEFT JOIN (
-    SELECT 
-      geocode4_corr, 
-      avg_ij_o_city_mandate, 
-      d_avg_ij_o_city_mandate 
-    FROM 
-      "policy"."china_spatial_relocation"
-  ) as relocation ON aggregate_pol.geocode4_corr = relocation.geocode4_corr 
-  LEFT JOIN (
-    SELECT year, province_en,
-  share_big_bank_loan,
-  LAG(share_big_bank_loan, 1) OVER (
-        PARTITION BY province_en
-        ORDER BY 
-          year
-      ) as lag_share_big_bank_loan,
-  share_big_loan,
-  LAG(share_big_loan, 1) OVER (
-        PARTITION BY province_en
-        ORDER BY 
-          year
-      ) as lag_share_big_loan,
-  credit_supply,
-  LAG(credit_supply, 1) OVER (
-        PARTITION BY province_en
-        ORDER BY 
-          year
-      ) as lag_credit_supply,
-  credit_supply_long_term,
-  LAG(credit_supply_long_term, 1) OVER (
-        PARTITION BY province_en
-        ORDER BY 
-          year
-      ) as lag_credit_supply_long_term,
-  credit_supply_short_term,
-  LAG(credit_supply_short_term, 1) OVER (
-        PARTITION BY province_en
-        ORDER BY 
-          year
-      ) as lag_credit_supply_short_term
-FROM (      
-SELECT 
-      province_loan_and_credit.year, 
-      province_loan_and_credit.province_en, 
-      CAST(
-        total_loan_big_four AS DECIMAL(16, 5)
-      )/ CAST(
-        total_bank_loan AS DECIMAL(16, 5)
-      ) AS share_big_bank_loan, 
-      CAST(
-        total_loan_big_four AS DECIMAL(16, 5)
-      )/ CAST(
-        total_loan AS DECIMAL(16, 5)
-      ) AS share_big_loan, 
-      CAST(
-        total_bank_loan AS DECIMAL(16, 5)
-      )/ CAST(
-        total_gdp AS DECIMAL(16, 5)
-      ) AS credit_supply, 
-      CAST(
-        total_long_term_loan AS DECIMAL(16, 5)
-      )/ CAST(
-        total_gdp AS DECIMAL(16, 5)
-      ) AS credit_supply_long_term, 
-      CAST(
-        total_short_term AS DECIMAL(16, 5)
-      )/ CAST(
-        total_gdp AS DECIMAL(16, 5)
-      ) AS credit_supply_short_term 
-    FROM 
-      almanac_bank_china.bank_socb_loan 
-      RIGHT JOIN almanac_bank_china.province_loan_and_credit ON bank_socb_loan.year = province_loan_and_credit.year 
-      AND bank_socb_loan.province_en = province_loan_and_credit.province_en
-  )
-  ) as credit ON aggregate_pol.year = credit.year 
-  AND aggregate_pol.province_en = credit.province_en 
-WHERE 
-  tso2 > 0 
-  AND output > 0 
-  and capital > 0 
-  and employment > 0 
-  and current_ratio > 0 
-  and cashflow_to_tangible > 0 
-  AND aggregate_pol.ind2 != '43' -- AND tfp_cit > 0
-ORDER BY ind2, cityen, year
-LIMIT 
-  10
-
-"""
-output = s3.run_query(
-                    query=query,
-                    database=DatabaseName,
-                    s3_output=s3_output_example,
-    filename = 'example_1'
-                )
-output
-```
-
-# Table `fin_dep_pollution_baseline_industry`
-
-Since the table to create has missing value, please use the following at the top of the query
-
-```
-CREATE TABLE database.table_name WITH (format = 'PARQUET') AS
-```
-
-
-Choose a location in S3 to save the CSV. It is recommended to save in it the `datalake-datascience` bucket. Locate an appropriate folder in the bucket, and make sure all output have the same format
-
-```python
-s3_output = 'DATA/ENVIRONMENT/CHINA/FYP/FINANCIAL_CONTRAINT/PAPER_FYP_FINANCE_POL/BASELINE/INDUSTRY'
-table_name = 'fin_dep_pollution_baseline_industry'
-```
-
-First, we need to delete the table (if exist)
-
-```python
-try:
-    response = glue.delete_table(
-        database=DatabaseName,
-        table=table_name
-    )
-    print(response)
-except Exception as e:
-    print(e)
-```
-
-Clean up the folder with the previous csv file. Be careful, it will erase all files inside the folder
-
-```python
-s3.remove_all_bucket(path_remove = s3_output)
-```
-
-```python
-%%time
-query = """
-CREATE TABLE {0}.{1} WITH (format = 'PARQUET') AS
-WITH aggregate_pol AS (
 SELECT 
     year, 
     geocode4_corr, 
@@ -722,7 +225,7 @@ SELECT
 SELECT 
   aggregate_pol.year, 
   CASE WHEN aggregate_pol.year in (
-    '2001', '2002', '2003', '2004', '2005'
+    '1998','1999','2000','2001', '2002', '2003', '2004', '2005'
   ) THEN 'FALSE' WHEN aggregate_pol.year in ('2006', '2007') THEN 'TRUE' END AS period, 
   aggregate_pol.province_en, 
   cityen, 
@@ -758,7 +261,6 @@ SELECT
   avg_ij_o_city_mandate,
   CASE WHEN d_avg_ij_o_city_mandate IS NULL THEN 'FALSE' ELSE d_avg_ij_o_city_mandate END AS d_avg_ij_o_city_mandate,
   in_10_000_tonnes, 
-  tfp_cit,
   credit_constraint,
   financial_dep_us,
   liquidity_need_us,
@@ -964,76 +466,50 @@ FROM
       year, 
       geocode4_corr, 
       indu_2,
-      -- cic, 
       SUM(output) AS output,
       SUM(employ) AS employment, 
       SUM(captal) AS capital,
-      SUM(sales) as sales,
-      --SUM(toasset) as toasset,
-      AVG(tfp_op) as tfp_cit
+      SUM(sales) as sales
+FROM(
+SELECT 
+  firm, 
+  year, 
+  geocode4_corr, 
+  CASE WHEN LENGTH(cic) = 4 THEN substr(cic, 1, 2) ELSE concat(
+    '0', 
+    substr(cic, 1, 1)
+  ) END AS indu_2, 
+  output, 
+  employ, 
+  captal, 
+  sales, 
+  toasset 
+FROM 
+  firms_survey.asif_firms_prepared 
+  INNER JOIN (
+    SELECT 
+      extra_code, 
+      geocode4_corr 
     FROM 
-      (
-        SELECT 
-      asif_city.firm, 
-      tfp_op, 
-      asif_city.year, 
-      asif_city.geocode4_corr, 
-      asif_tfp_firm_level.indu_2,
-      -- asif_city.cic
-      asif_city.output,
-      asif_city.employ, 
-      asif_city.captal, 
-      asif_city.sales
-      --asif_city.toasset 
-    FROM 
-      firms_survey.asif_tfp_firm_level 
-      RIGHT JOIN (
-        SELECT 
-          firm, 
-          year, 
-          geocode4_corr, 
-          -- cic,
-          CASE WHEN LENGTH(cic) = 4 THEN substr(cic, 1, 2) ELSE concat(
-            '0', 
-            substr(cic, 1, 1)
-          ) END AS indu_2, 
-          output, 
-          employ, 
-          captal, 
-          sales, 
-          toasset 
-        FROM 
-          firms_survey.asif_firms_prepared 
-          INNER JOIN (
-            SELECT 
-              extra_code, 
-              geocode4_corr 
-            FROM 
-              chinese_lookup.china_city_code_normalised 
-            GROUP BY 
-              extra_code, 
-              geocode4_corr
-          ) as no_dup_citycode ON asif_firms_prepared.citycode = no_dup_citycode.extra_code
-      ) as asif_city ON asif_tfp_firm_level.firm = asif_city.firm 
-      and asif_tfp_firm_level.year = asif_city.year 
-      and asif_tfp_firm_level.indu_2 = asif_city.indu_2 
-      and asif_tfp_firm_level.geocode4_corr = asif_city.geocode4_corr 
-      ) 
-    WHERE 
+      chinese_lookup.china_city_code_normalised 
+    GROUP BY 
+      extra_code, 
+      geocode4_corr
+  ) as no_dup_citycode ON asif_firms_prepared.citycode = no_dup_citycode.extra_code
+  )
+  WHERE 
       year in (
+      '1998', '1999', '2000',
         '2001', '2002', '2003', '2004', '2005', 
         '2006', '2007'
       ) 
     GROUP BY 
+    year, 
       geocode4_corr, 
-      indu_2,
-      -- cic, 
-      year
+      indu_2
   ) as agg_output ON aggregate_pol.geocode4_corr = agg_output.geocode4_corr 
-  -- AND aggregate_pol.cic = agg_output.cic 
   AND aggregate_pol.ind2 = agg_output.indu_2 
   AND aggregate_pol.year = agg_output.year 
-  
   LEFT JOIN firms_survey.asif_industry_characteristics_ownership
     ON aggregate_pol.geocode4_corr = asif_industry_characteristics_ownership.geocode4_corr
     AND aggregate_pol.ind2 = asif_industry_characteristics_ownership.indu_2
@@ -1046,39 +522,42 @@ FROM "policy"."china_spatial_relocation"
     ) as relocation
     ON aggregate_pol.geocode4_corr = relocation.geocode4_corr
 LEFT JOIN (
-    SELECT year, province_en,
-  share_big_bank_loan,
+    SELECT 
+  year, 
+  province_en, 
+  share_big_bank_loan, 
   LAG(share_big_bank_loan, 1) OVER (
-        PARTITION BY province_en
-        ORDER BY 
-          year
-      ) as lag_share_big_bank_loan,
-  share_big_loan,
+    PARTITION BY province_en 
+    ORDER BY 
+      year
+  ) as lag_share_big_bank_loan, 
+  share_big_loan, 
   LAG(share_big_loan, 1) OVER (
-        PARTITION BY province_en
-        ORDER BY 
-          year
-      ) as lag_share_big_loan,
-  credit_supply,
+    PARTITION BY province_en 
+    ORDER BY 
+      year
+  ) as lag_share_big_loan, 
+  credit_supply, 
   LAG(credit_supply, 1) OVER (
-        PARTITION BY province_en
-        ORDER BY 
-          year
-      ) as lag_credit_supply,
-  credit_supply_long_term,
+    PARTITION BY province_en 
+    ORDER BY 
+      year
+  ) as lag_credit_supply, 
+  credit_supply_long_term, 
   LAG(credit_supply_long_term, 1) OVER (
-        PARTITION BY province_en
-        ORDER BY 
-          year
-      ) as lag_credit_supply_long_term,
-  credit_supply_short_term,
+    PARTITION BY province_en 
+    ORDER BY 
+      year
+  ) as lag_credit_supply_long_term, 
+  credit_supply_short_term, 
   LAG(credit_supply_short_term, 1) OVER (
-        PARTITION BY province_en
-        ORDER BY 
-          year
-      ) as lag_credit_supply_short_term
-FROM (      
-SELECT 
+    PARTITION BY province_en 
+    ORDER BY 
+      year
+  ) as lag_credit_supply_short_term 
+FROM 
+  (
+    SELECT 
       province_loan_and_credit.year, 
       province_loan_and_credit.province_en, 
       CAST(
@@ -1107,9 +586,530 @@ SELECT
         total_gdp AS DECIMAL(16, 5)
       ) AS credit_supply_short_term 
     FROM 
-      almanac_bank_china.bank_socb_loan 
-      RIGHT JOIN almanac_bank_china.province_loan_and_credit ON bank_socb_loan.year = province_loan_and_credit.year 
-      AND bank_socb_loan.province_en = province_loan_and_credit.province_en
+      almanac_bank_china.province_loan_and_credit 
+      LEFT JOIN (
+        SELECT 
+          province_en, 
+          year, 
+          share[ '中国农业' ] + share[ '中国银行' ] + share[ '中国工商' ] + share[ '中国建设' ] as total_loan_big_four 
+        FROM 
+          (
+            SELECT 
+              province_en, 
+              year, 
+              map_agg(bank, loan) as share 
+            FROM 
+              "almanac_bank_china"."bank_socb_loan" 
+            GROUP BY 
+              province_en, 
+              year
+          )
+      ) as big_four ON province_loan_and_credit.year = big_four.year 
+      AND province_loan_and_credit.province_en = big_four.province_en
+    -- 
+  )
+  ) as credit ON aggregate_pol.year = credit.year 
+  AND aggregate_pol.province_en = credit.province_en 
+WHERE 
+  tso2 > 0 
+  AND output > 0 
+  and capital > 0 
+  and employment > 0
+  and current_ratio > 0
+  and cashflow_to_tangible > 0
+  AND aggregate_pol.ind2 != '43'
+  ORDER BY year
+LIMIT 
+  10
+"""
+output = s3.run_query(
+                    query=query,
+                    database=DatabaseName,
+                    s3_output=s3_output_example,
+    filename = 'example_1'
+                )
+output
+```
+
+# Table `fin_dep_pollution_baseline_industry`
+
+Since the table to create has missing value, please use the following at the top of the query
+
+```
+CREATE TABLE database.table_name WITH (format = 'PARQUET') AS
+```
+
+
+Choose a location in S3 to save the CSV. It is recommended to save in it the `datalake-datascience` bucket. Locate an appropriate folder in the bucket, and make sure all output have the same format
+
+```python
+s3_output = 'DATA/ENVIRONMENT/CHINA/FYP/FINANCIAL_CONTRAINT/PAPER_FYP_FINANCE_POL/BASELINE/INDUSTRY'
+table_name = 'fin_dep_pollution_baseline_industry'
+```
+
+First, we need to delete the table (if exist)
+
+```python
+try:
+    response = glue.delete_table(
+        database=DatabaseName,
+        table=table_name
+    )
+    print(response)
+except Exception as e:
+    print(e)
+```
+
+Clean up the folder with the previous csv file. Be careful, it will erase all files inside the folder
+
+```python
+s3.remove_all_bucket(path_remove = s3_output)
+```
+
+```python
+%%time
+query = """
+CREATE TABLE {0}.{1} WITH (format = 'PARQUET') AS
+WITH aggregate_pol AS (
+SELECT 
+    year, 
+    geocode4_corr, 
+    TRIM(province_en) AS province_en, 
+    cityen, 
+    -- indus_code AS cic,
+    ind2, 
+    SUM(tso2) as tso2, 
+    lower_location, 
+    larger_location, 
+    coastal 
+  FROM 
+    (
+      SELECT 
+        year, 
+        province_en, 
+        citycode, 
+        geocode4_corr, 
+        china_city_sector_pollution.cityen, 
+        --indus_code,
+        ind2,  
+        tso2, 
+        lower_location, 
+        larger_location, 
+        coastal 
+      FROM 
+        environment.china_city_sector_pollution 
+        INNER JOIN (
+          SELECT 
+            extra_code, 
+            geocode4_corr,
+          province_en
+          FROM 
+            chinese_lookup.china_city_code_normalised 
+          GROUP BY 
+            extra_code, 
+            geocode4_corr,
+          province_en
+        ) as no_dup_citycode ON china_city_sector_pollution.citycode = no_dup_citycode.extra_code
+    ) 
+  GROUP BY 
+    year, 
+    province_en, 
+    geocode4_corr, 
+    cityen, 
+    --indus_code,
+    ind2, 
+    lower_location, 
+    larger_location, 
+    coastal
+) 
+SELECT 
+  aggregate_pol.year, 
+  CASE WHEN aggregate_pol.year in (
+    '1998','1999','2000','2001', '2002', '2003', '2004', '2005'
+  ) THEN 'FALSE' WHEN aggregate_pol.year in ('2006', '2007') THEN 'TRUE' END AS period, 
+  aggregate_pol.province_en, 
+  cityen, 
+  aggregate_pol.geocode4_corr, 
+  CASE WHEN tcz IS NULL THEN '0' ELSE tcz END AS tcz, 
+  CASE WHEN spz IS NULL OR spz = '#N/A' THEN '0' ELSE spz END AS spz, 
+  --aggregate_pol.cic, 
+  aggregate_pol.ind2, 
+  CASE WHEN short IS NULL THEN 'Unknown' ELSE short END AS short, 
+  polluted_d50i, 
+  polluted_d75i, 
+  polluted_d80i, 
+  polluted_d85i, 
+  polluted_d90i, 
+  polluted_d95i, 
+  polluted_mi,
+  polluted_d50_cit, 
+  polluted_d75_cit, 
+  polluted_d80_cit, 
+  polluted_d85_cit, 
+  polluted_d90_cit, 
+  polluted_d95_cit, 
+  polluted_m_cit,
+  tso2, 
+  CAST(
+    tso2 AS DECIMAL(16, 5)
+  ) / CAST(
+    output AS DECIMAL(16, 5)
+  ) AS so2_intensity, 
+  tso2_mandate_c,
+  above_threshold_mandate,
+  above_average_mandate,
+  avg_ij_o_city_mandate,
+  CASE WHEN d_avg_ij_o_city_mandate IS NULL THEN 'FALSE' ELSE d_avg_ij_o_city_mandate END AS d_avg_ij_o_city_mandate,
+  in_10_000_tonnes, 
+  credit_constraint,
+  financial_dep_us,
+  liquidity_need_us,
+  rd_intensity_us,
+  1/supply_all_credit as supply_all_credit,
+  1/supply_long_term_credit as supply_long_term_credit,
+  share_big_bank_loan,
+  lag_share_big_bank_loan,
+  share_big_loan,
+  lag_share_big_loan,
+  credit_supply,
+  lag_credit_supply,
+  credit_supply_long_term,
+  lag_credit_supply_long_term,
+  credit_supply_short_term,
+  lag_credit_supply_short_term,
+  output,
+  sales,
+  employment,
+  capital,
+  current_asset,
+  tofixed,
+  total_liabilities,
+  total_asset,
+  tangible,
+  cashflow,
+  current_ratio,
+  lag_current_ratio,
+  liabilities_tot_asset,
+  sales_tot_asset,
+  lag_sales_tot_asset,
+  asset_tangibility_tot_asset,
+  lag_liabilities_tot_asset,
+  cashflow_to_tangible,
+  lag_cashflow_to_tangible,
+  cashflow_tot_asset,
+  lag_cashflow_tot_asset,
+  return_to_sale,
+  lag_return_to_sale,
+  lower_location, 
+  larger_location, 
+  coastal,
+  dominated_output_soe_c,
+  dominated_employment_soe_c,
+  dominated_sales_soe_c,
+  dominated_capital_soe_c,
+  dominated_output_for_c,
+  dominated_employment_for_c,
+  dominated_sales_for_c,
+  dominated_capital_for_c,  
+  dominated_output_i,
+  dominated_employ_i,
+  dominated_sales_i,
+  dominated_capital_i,
+  dominated_output_soe_i,
+  dominated_employment_soe_i,
+  dominated_sales_soe_i,
+  dominated_capital_soe_i,
+  dominated_output_for_i,
+  dominated_employment_for_i,
+  dominated_sales_for_i,
+  dominated_capital_for_i,  
+  DENSE_RANK() OVER (
+    ORDER BY 
+      city_mandate.geocode4_corr, 
+      aggregate_pol.ind2
+  ) AS fe_c_i, 
+  DENSE_RANK() OVER (
+    ORDER BY 
+      aggregate_pol.year, 
+      aggregate_pol.ind2
+  ) AS fe_t_i, 
+  DENSE_RANK() OVER (
+    ORDER BY 
+      city_mandate.geocode4_corr, 
+      aggregate_pol.year
+  ) AS fe_c_t 
+FROM 
+  aggregate_pol 
+  INNER JOIN (
+  SELECT 
+  indu_2,
+  current_asset,
+  tofixed,
+  total_liabilities,
+  total_asset,
+  tangible,
+  cashflow,
+  current_ratio,
+  lag_current_ratio,
+  liabilities_tot_asset,
+  sales_tot_asset,
+  lag_sales_tot_asset,
+  asset_tangibility_tot_asset,
+  lag_liabilities_tot_asset,
+  cashflow_to_tangible,
+  lag_cashflow_to_tangible,
+  cashflow_tot_asset,
+  lag_cashflow_tot_asset,
+  return_to_sale,
+  lag_return_to_sale
+    
+  FROM firms_survey.asif_industry_financial_ratio_industry 
+  WHERE year = '2002'
+  ) AS asif_industry_financial_ratio_industry
+  ON 
+  aggregate_pol.ind2 = asif_industry_financial_ratio_industry.indu_2 
+  INNER JOIN (
+    SELECT 
+  geocode4_corr, 
+  tso2_mandate_c, 
+  in_10_000_tonnes, 
+  MAP(
+    ARRAY[.5, 
+    .75, 
+    .90, 
+    .95 ], 
+    zip_with(
+      transform(
+        sequence(1, 4), 
+        x -> tso2_mandate_c
+      ), 
+      tso2_mandate_c_pct, 
+      (x, y) -> x < y
+    )
+  ) AS above_threshold_mandate, 
+  CASE WHEN tso2_mandate_c > tso2_mandate_c_avg THEN 'ABOVE' ELSE 'BELOW' END AS above_average_mandate 
+FROM 
+  (
+    (
+      SELECT 
+        'TEMP' as temp, 
+        approx_percentile(
+          tso2_mandate_c, ARRAY[.5,.75,.90, 
+          .95]
+        ) AS tso2_mandate_c_pct, 
+        AVG(tso2_mandate_c) AS tso2_mandate_c_avg 
+      FROM 
+        policy.china_city_reduction_mandate
+    ) as percentile 
+    LEFT JOIN (
+      SELECT 
+        'TEMP' as temp, 
+        citycn, 
+        tso2_mandate_c, 
+        in_10_000_tonnes 
+      FROM 
+        policy.china_city_reduction_mandate
+    ) as mandate ON percentile.temp = mandate.temp
+  ) as map_mandate
+  INNER JOIN chinese_lookup.china_city_code_normalised ON map_mandate.citycn = china_city_code_normalised.citycn 
+    WHERE 
+      extra_code = geocode4_corr
+  ) as city_mandate ON aggregate_pol.geocode4_corr = city_mandate.geocode4_corr 
+  LEFT JOIN policy.china_city_tcz_spz ON aggregate_pol.geocode4_corr = china_city_tcz_spz.geocode4_corr 
+  LEFT JOIN chinese_lookup.ind_cic_2_name ON aggregate_pol.ind2 = ind_cic_2_name.cic 
+  LEFT JOIN (
+    SELECT 
+      ind2, 
+      year,
+      polluted_d50i, 
+      polluted_d75i, 
+      polluted_d80i, 
+      polluted_d85i, 
+      polluted_d90i, 
+      polluted_d95i, 
+      polluted_mi
+    FROM 
+      "environment"."china_sector_pollution_threshold" 
+
+  ) as polluted_sector ON aggregate_pol.ind2 = polluted_sector.ind2 
+  and aggregate_pol.year = polluted_sector.year 
+  LEFT JOIN (
+    SELECT 
+      ind2, 
+      year,
+      geocode4_corr,
+      polluted_d50_cit, 
+      polluted_d75_cit, 
+      polluted_d80_cit, 
+      polluted_d85_cit, 
+      polluted_d90_cit, 
+      polluted_d95_cit, 
+      polluted_m_cit
+    FROM 
+      "environment"."china_city_sector_year_pollution_threshold" 
+
+  ) as polluted_sector_cit ON aggregate_pol.ind2 = polluted_sector_cit.ind2 
+  and aggregate_pol.year = polluted_sector_cit.year 
+  and aggregate_pol.geocode4_corr = polluted_sector_cit.geocode4_corr 
+  LEFT JOIN (
+    SELECT 
+      cic, 
+      financial_dep_china AS credit_constraint,
+      financial_dep_us,
+      liquidity_need_us,
+      rd_intensity_us 
+    FROM 
+      industry.china_credit_constraint
+  ) as cred_constraint ON aggregate_pol.ind2 = cred_constraint.cic 
+  LEFT JOIN (
+    SELECT 
+      year, 
+      geocode4_corr, 
+      indu_2,
+      SUM(output) AS output,
+      SUM(employ) AS employment, 
+      SUM(captal) AS capital,
+      SUM(sales) as sales
+FROM(
+SELECT 
+  firm, 
+  year, 
+  geocode4_corr, 
+  CASE WHEN LENGTH(cic) = 4 THEN substr(cic, 1, 2) ELSE concat(
+    '0', 
+    substr(cic, 1, 1)
+  ) END AS indu_2, 
+  output, 
+  employ, 
+  captal, 
+  sales, 
+  toasset 
+FROM 
+  firms_survey.asif_firms_prepared 
+  INNER JOIN (
+    SELECT 
+      extra_code, 
+      geocode4_corr 
+    FROM 
+      chinese_lookup.china_city_code_normalised 
+    GROUP BY 
+      extra_code, 
+      geocode4_corr
+  ) as no_dup_citycode ON asif_firms_prepared.citycode = no_dup_citycode.extra_code
+  )
+  WHERE 
+      year in (
+      '1998', '1999', '2000',
+        '2001', '2002', '2003', '2004', '2005', 
+        '2006', '2007'
+      ) 
+    GROUP BY 
+    year, 
+      geocode4_corr, 
+      indu_2
+  ) as agg_output ON aggregate_pol.geocode4_corr = agg_output.geocode4_corr 
+  AND aggregate_pol.ind2 = agg_output.indu_2 
+  AND aggregate_pol.year = agg_output.year 
+  LEFT JOIN firms_survey.asif_industry_characteristics_ownership
+    ON aggregate_pol.geocode4_corr = asif_industry_characteristics_ownership.geocode4_corr
+    AND aggregate_pol.ind2 = asif_industry_characteristics_ownership.indu_2
+  LEFT JOIN firms_survey.asif_city_characteristics_ownership
+    ON aggregate_pol.geocode4_corr = asif_city_characteristics_ownership.geocode4_corr
+  LEFT JOIN (
+  SELECT TRIM(province) AS province, 
+  supply_all_credit, supply_long_term_credit
+  FROM chinese_lookup.province_credit_constraint) as province_credit_constraint
+  ON aggregate_pol.province_en = province_credit_constraint.Province
+  LEFT JOIN (
+    SELECT geocode4_corr, avg_ij_o_city_mandate, d_avg_ij_o_city_mandate 
+FROM "policy"."china_spatial_relocation"
+    ) as relocation
+    ON aggregate_pol.geocode4_corr = relocation.geocode4_corr
+LEFT JOIN (
+    SELECT 
+  year, 
+  province_en, 
+  share_big_bank_loan, 
+  LAG(share_big_bank_loan, 1) OVER (
+    PARTITION BY province_en 
+    ORDER BY 
+      year
+  ) as lag_share_big_bank_loan, 
+  share_big_loan, 
+  LAG(share_big_loan, 1) OVER (
+    PARTITION BY province_en 
+    ORDER BY 
+      year
+  ) as lag_share_big_loan, 
+  credit_supply, 
+  LAG(credit_supply, 1) OVER (
+    PARTITION BY province_en 
+    ORDER BY 
+      year
+  ) as lag_credit_supply, 
+  credit_supply_long_term, 
+  LAG(credit_supply_long_term, 1) OVER (
+    PARTITION BY province_en 
+    ORDER BY 
+      year
+  ) as lag_credit_supply_long_term, 
+  credit_supply_short_term, 
+  LAG(credit_supply_short_term, 1) OVER (
+    PARTITION BY province_en 
+    ORDER BY 
+      year
+  ) as lag_credit_supply_short_term 
+FROM 
+  (
+    SELECT 
+      province_loan_and_credit.year, 
+      province_loan_and_credit.province_en, 
+      CAST(
+        total_loan_big_four AS DECIMAL(16, 5)
+      )/ CAST(
+        total_bank_loan AS DECIMAL(16, 5)
+      ) AS share_big_bank_loan, 
+      CAST(
+        total_loan_big_four AS DECIMAL(16, 5)
+      )/ CAST(
+        total_loan AS DECIMAL(16, 5)
+      ) AS share_big_loan, 
+      CAST(
+        total_bank_loan AS DECIMAL(16, 5)
+      )/ CAST(
+        total_gdp AS DECIMAL(16, 5)
+      ) AS credit_supply, 
+      CAST(
+        total_long_term_loan AS DECIMAL(16, 5)
+      )/ CAST(
+        total_gdp AS DECIMAL(16, 5)
+      ) AS credit_supply_long_term, 
+      CAST(
+        total_short_term AS DECIMAL(16, 5)
+      )/ CAST(
+        total_gdp AS DECIMAL(16, 5)
+      ) AS credit_supply_short_term 
+    FROM 
+      almanac_bank_china.province_loan_and_credit 
+      LEFT JOIN (
+        SELECT 
+          province_en, 
+          year, 
+          share[ '中国农业' ] + share[ '中国银行' ] + share[ '中国工商' ] + share[ '中国建设' ] as total_loan_big_four 
+        FROM 
+          (
+            SELECT 
+              province_en, 
+              year, 
+              map_agg(bank, loan) as share 
+            FROM 
+              "almanac_bank_china"."bank_socb_loan" 
+            GROUP BY 
+              province_en, 
+              year
+          )
+      ) as big_four ON province_loan_and_credit.year = big_four.year 
+      AND province_loan_and_credit.province_en = big_four.province_en
   )
   ) as credit ON aggregate_pol.year = credit.year 
   AND aggregate_pol.province_en = credit.province_en 
@@ -1416,7 +1416,7 @@ with open(path_json) as json_file:
 ```
 
 ```python
-partition_keys = ["province_en", "geocode4_corr","ind2", "year" ]
+partition_keys = ["province_en", "geocode4_corr","ind2", "year"]
 notebookname =  "00_credit_constraint_industry.ipynb"
 index_final_table = [0]
 if_final = 'True'
