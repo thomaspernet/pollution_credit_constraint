@@ -19,10 +19,9 @@ with Diagram("FIN DEP POLLUTION BASELINE INDUSTRY", show=False, filename="/home/
      temp_10 = S3('asif_firms_prepared')
      temp_11 = S3('asif_industry_characteristics_ownership')
      temp_12 = S3('asif_city_characteristics_ownership')
-     temp_13 = S3('province_credit_constraint')
-     temp_14 = S3('china_spatial_relocation')
-     temp_15 = S3('province_loan_and_credit')
-     temp_16 = S3('bank_socb_loan')
+     temp_13 = S3('china_spatial_relocation')
+     temp_14 = S3('province_loan_and_credit')
+     temp_15 = S3('bank_socb_loan')
 
      with Cluster("FINAL"):
 
@@ -44,4 +43,3 @@ with Diagram("FIN DEP POLLUTION BASELINE INDUSTRY", show=False, filename="/home/
      temp_final_0 << temp_13
      temp_final_0 << temp_14
      temp_final_0 << temp_15
-     temp_final_0 << temp_16
