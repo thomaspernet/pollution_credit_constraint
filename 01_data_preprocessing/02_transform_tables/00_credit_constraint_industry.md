@@ -256,6 +256,7 @@ SELECT
     output AS DECIMAL(16, 5)
   ) AS so2_intensity, 
   tso2_mandate_c,
+  target_reduction_so2_p,
   above_threshold_mandate,
   above_average_mandate,
   avg_ij_o_city_mandate,
@@ -372,6 +373,7 @@ FROM
     SELECT 
   geocode4_corr, 
   tso2_mandate_c, 
+  target_reduction_so2_p,
   in_10_000_tonnes, 
   MAP(
     ARRAY[.5, 
@@ -406,6 +408,7 @@ FROM
         'TEMP' as temp, 
         citycn, 
         tso2_mandate_c, 
+        target_reduction_so2_p,
         in_10_000_tonnes 
       FROM 
         policy.china_city_reduction_mandate
@@ -756,6 +759,7 @@ SELECT
     output AS DECIMAL(16, 5)
   ) AS so2_intensity, 
   tso2_mandate_c,
+  target_reduction_so2_p,
   above_threshold_mandate,
   above_average_mandate,
   avg_ij_o_city_mandate,
@@ -872,6 +876,7 @@ FROM
     SELECT 
   geocode4_corr, 
   tso2_mandate_c, 
+  target_reduction_so2_p,
   in_10_000_tonnes, 
   MAP(
     ARRAY[.5, 
@@ -906,6 +911,7 @@ FROM
         'TEMP' as temp, 
         citycn, 
         tso2_mandate_c, 
+        target_reduction_so2_p,
         in_10_000_tonnes 
       FROM 
         policy.china_city_reduction_mandate
@@ -1229,6 +1235,8 @@ schema = [{'Name': 'year', 'Type': 'string', 'Comment': 'year from 2001 to 2007'
            'Type': 'decimal(21,5)', 'Comment': 'SO2 divided by output'},
           {'Name': 'tso2_mandate_c', 'Type': 'float',
            'Comment': 'city reduction mandate in tonnes'},
+          {'Name': 'target_reduction_so2_p', 'Type': 'float',
+           'Comment': 'official province reduction mandate in percentage. From https://www.sciencedirect.com/science/article/pii/S0095069617303522#appsec1'},
           {'Name': 'above_threshold_mandate',
            'Type': 'map<double,boolean>',
            'Comment': 'Policy mandate above percentile .5, .75, .9, .95'},
