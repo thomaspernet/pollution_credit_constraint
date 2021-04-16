@@ -179,6 +179,8 @@ SELECT
     -- indus_code AS cic,
     ind2, 
     SUM(tso2) as tso2, 
+    SUM(twaste_water) as twaste_water,
+    SUM(tcod) as tcod,
     lower_location, 
     larger_location, 
     coastal 
@@ -191,8 +193,10 @@ SELECT
         geocode4_corr, 
         china_city_sector_pollution.cityen, 
         --indus_code,
-        ind2,  
-        tso2, 
+        ind2,
+        tso2,
+        tcod,
+        twaste_water, 
         lower_location, 
         larger_location, 
         coastal 
@@ -250,6 +254,8 @@ SELECT
   polluted_d95_cit, 
   polluted_m_cit,
   tso2, 
+  twaste_water,
+  tcod,
   CAST(
     tso2 AS DECIMAL(16, 5)
   ) / CAST(
@@ -257,6 +263,7 @@ SELECT
   ) AS so2_intensity, 
   tso2_mandate_c,
   target_reduction_so2_p,
+  target_reduction_co2_p,
   above_threshold_mandate,
   above_average_mandate,
   avg_ij_o_city_mandate,
@@ -374,6 +381,7 @@ FROM
   geocode4_corr, 
   tso2_mandate_c, 
   target_reduction_so2_p,
+  target_reduction_co2_p,
   in_10_000_tonnes, 
   MAP(
     ARRAY[.5, 
@@ -409,6 +417,7 @@ FROM
         citycn, 
         tso2_mandate_c, 
         target_reduction_so2_p,
+        target_reduction_co2_p,
         in_10_000_tonnes 
       FROM 
         policy.china_city_reduction_mandate
@@ -681,7 +690,9 @@ SELECT
     cityen, 
     -- indus_code AS cic,
     ind2, 
-    SUM(tso2) as tso2, 
+    SUM(tso2) as tso2,
+    SUM(twaste_water) as twaste_water,
+    SUM(tcod) as tcod,
     lower_location, 
     larger_location, 
     coastal 
@@ -695,7 +706,9 @@ SELECT
         china_city_sector_pollution.cityen, 
         --indus_code,
         ind2,  
-        tso2, 
+        tso2,
+        tcod, 
+        twaste_water,
         lower_location, 
         larger_location, 
         coastal 
@@ -752,7 +765,9 @@ SELECT
   polluted_d90_cit, 
   polluted_d95_cit, 
   polluted_m_cit,
-  tso2, 
+  tso2,
+  tcod, 
+  twaste_water, 
   CAST(
     tso2 AS DECIMAL(16, 5)
   ) / CAST(
@@ -760,6 +775,7 @@ SELECT
   ) AS so2_intensity, 
   tso2_mandate_c,
   target_reduction_so2_p,
+  target_reduction_co2_p,
   above_threshold_mandate,
   above_average_mandate,
   avg_ij_o_city_mandate,
@@ -877,6 +893,7 @@ FROM
   geocode4_corr, 
   tso2_mandate_c, 
   target_reduction_so2_p,
+  target_reduction_co2_p,
   in_10_000_tonnes, 
   MAP(
     ARRAY[.5, 
@@ -912,6 +929,7 @@ FROM
         citycn, 
         tso2_mandate_c, 
         target_reduction_so2_p,
+        target_reduction_co2_p,
         in_10_000_tonnes 
       FROM 
         policy.china_city_reduction_mandate
@@ -1230,12 +1248,18 @@ schema = [{'Name': 'year', 'Type': 'string', 'Comment': 'year from 2001 to 2007'
           {'Name': 'polluted_m_cit',
            'Type': 'varchar(5)', 'Comment': 'Sectors with values above Yearly average of SO2 label as ABOVE else BELOW'},
           {'Name': 'tso2', 'Type': 'bigint',
-           'Comment': 'Total so2 city sector. Filtered values above  4863 (5% of the distribution)'},
+           'Comment': 'Total so2 city sector.'},
+          {'Name': 'tcod', 'Type': 'bigint',
+           'Comment': 'Total cod city sector'},
+          {'Name': 'twaste_water', 'Type': 'bigint',
+           'Comment': 'Total waste water city sector.'},
           {'Name': 'so2_intensity',
            'Type': 'decimal(21,5)', 'Comment': 'SO2 divided by output'},
           {'Name': 'tso2_mandate_c', 'Type': 'float',
            'Comment': 'city reduction mandate in tonnes'},
           {'Name': 'target_reduction_so2_p', 'Type': 'float',
+           'Comment': 'official province reduction mandate in percentage. From https://www.sciencedirect.com/science/article/pii/S0095069617303522#appsec1'},
+          {'Name': 'target_reduction_co2_p', 'Type': 'float',
            'Comment': 'official province reduction mandate in percentage. From https://www.sciencedirect.com/science/article/pii/S0095069617303522#appsec1'},
           {'Name': 'above_threshold_mandate',
            'Type': 'map<double,boolean>',
