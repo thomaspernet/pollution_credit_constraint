@@ -159,7 +159,7 @@ for key, value in enumerate(schema):
 ```
 
 ```sos kernel="SoS"
-download_data = True
+download_data = False
 filename = 'df_{}'.format(table)
 full_path_filename = 'SQL_OUTPUT_ATHENA/CSV/{}.csv'.format(filename)
 path_local = os.path.join(str(Path(path).parent.parent.parent), 
@@ -396,6 +396,22 @@ if add_to_dic:
         },
         ### year
         {
+        'old':'year1998',
+        'new':'\\text{1998}'
+        },
+        {
+        'old':'year1999',
+        'new':'\\text{1999}'
+        },
+        {
+        'old':'year2000',
+        'new':'\\text{2000}'
+        },
+        {
+        'old':'year2001',
+        'new':'\\text{2001}'
+        },
+        {
         'old':'year2002',
         'new':'\\text{2002}'
         },
@@ -462,12 +478,44 @@ mutate(
     polluted_d95i = relevel(as.factor(polluted_d95i), ref='BELOW'),
     polluted_mi = relevel(as.factor(polluted_mi), ref='BELOW'),
     d_avg_ij_o_city_mandate = relevel(as.factor(d_avg_ij_o_city_mandate), ref="FALSE"),
-    fin_dev = 1- share_big_loan 
+    fin_dev = 1- share_big_loan,
+    lag_fin_dev = 1- lag_share_big_loan,
 )
 ```
 
 ```sos kernel="R"
 head(df_final)
+```
+
+<!-- #region kernel="R" -->
+Aggregate at the province-industry-year level
+<!-- #endregion -->
+
+```sos kernel="R"
+df_agg <- df_final %>%
+group_by(province_en, ind2, year, period, fe_p_i , fe_t_i , fe_p_t) %>%
+summarize(
+    tso2 = sum(tso2),
+    tcod = sum(tcod),
+    twaste_water = sum(twaste_water),
+    output = sum(output),
+    employment = sum(employment),
+    capital = sum(capital),
+    target_reduction_so2_p = max(target_reduction_so2_p),
+    target_reduction_co2_p = max(target_reduction_co2_p),
+    lag_credit_supply = max(lag_credit_supply),
+    lag_credit_supply_long_term = max(lag_credit_supply_long_term),
+    fin_dev = max(fin_dev),
+    lag_fin_dev = max(lag_fin_dev),
+    credit_constraint = max(credit_constraint),
+) %>%
+ungroup()%>%
+mutate(
+    year = relevel(as.factor(year), ref='2001'),
+    year1 = relevel(as.factor(year), ref='2005')
+)
+
+head(df_agg)
 ```
 
 <!-- #region kernel="SoS" -->
@@ -496,6 +544,10 @@ $$
   * Deregulation has a stronger effect on constraint sectors than non-constraint → backed by the theory that credit openness is more beneficial for constraint sectors
 <!-- #endregion -->
 
+<!-- #region kernel="R" -->
+### City level
+<!-- #endregion -->
+
 ```sos kernel="SoS" nteract={"transient": {"deleting": false}}
 folder = 'Tables_0'
 table_nb = 1
@@ -510,15 +562,6 @@ for ext in ['.txt', '.tex', '.pdf']:
 
 ```sos kernel="R"
 %get path table
- #### .5
-#var <- .5
-#df_temp_true = df_final %>% 
-#    mutate(filter_ = str_extract(above_threshold_mandate, paste0("(?<=", var, "\\=)(.*?)(?=\\,)")))%>%
-#    filter(filter_ == 'false') ### fix do not change
-#df_temp_false = df_final %>% 
-#    mutate(filter_ = str_extract(above_threshold_mandate, paste0("(?<=", var, "\\=)(.*?)(?=\\,)"))) %>%
-#    filter(filter_ == 'true')
-
 ## SO2
 t_0 <- felm(log(tso2) ~  
             log(output) + log(employment) + log(capital) + 
@@ -541,37 +584,37 @@ t_2 <- felm(log(tso2) ~
 t_3 <- felm(log(tcod) ~  
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply) * credit_constraint
-           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(tcod > 1098907647),
+           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(tcod > 0),
             exactDOF = TRUE)
 
 t_4 <- felm(log(tcod) ~  
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply_long_term) * credit_constraint
-           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(tcod > 1098907647),
+           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(tcod > 0),
             exactDOF = TRUE)
 
 t_5 <- felm(log(tcod) ~  
             log(output) + log(employment) + log(capital) + 
             log(fin_dev) * credit_constraint
-           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr+ ind2, df_final%>% filter(tcod > 1098907647),
+           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr+ ind2, df_final%>% filter(tcod > 0),
             exactDOF = TRUE)
 ## twaste water
 t_6 <- felm(log(twaste_water) ~  
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply) * credit_constraint
-           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(twaste_water > 0),
+           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(twaste_water > 500),
             exactDOF = TRUE)
 
 t_7 <- felm(log(twaste_water) ~  
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply_long_term) * credit_constraint
-           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(twaste_water > 0),
+           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(twaste_water > 500),
             exactDOF = TRUE)
 
 t_8 <- felm(log(twaste_water) ~  
             log(output) + log(employment) + log(capital) + 
             log(fin_dev) * credit_constraint
-           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr+ ind2, df_final%>% filter(twaste_water > 0),
+           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr+ ind2, df_final%>% filter(twaste_water > 500),
             exactDOF = TRUE)
             
 dep <- "Dependent variable: SO2 emission"
@@ -584,7 +627,129 @@ fe1 <- list(
 table_1 <- go_latex(list(
     t_0,t_1, t_2, t_3, t_4, t_5, t_6, t_7, t_8
 ),
-    title="SO2 emission reduction, credit supply and financial development",
+    title="Polution emission reduction, credit supply and financial development",
+    dep_var = dep,
+    addFE=fe1,
+    save=TRUE,
+    note = FALSE,
+    name=path
+) 
+```
+
+```sos kernel="SoS"
+tbe1  = "This table estimates eq(3). " \
+"Heteroskedasticity-robust standard errors" \
+"clustered at the product level appear inparentheses."\
+"All loan is the share of total loan normalised by the GDP. " \
+"Long-term loan is the share of long term loan normalised by the GDP. " \
+"Financial development is defined as the share of non-4-SOCBs' share in credit) " \
+"Column 4 to 9 splits cities based on the presence of SOEs firms. Above means the total output produced by "\
+"SOEs firms exceed the output of private firms. " \
+"\sym{*} Significance at the 10\%, \sym{**} Significance at the 5\%, \sym{***} Significance at the 1\%."
+
+multicolumn ={
+    'SO2': 3,
+    'COD': 3,
+    'Waste water': 3,
+}
+
+#multi_lines_dep = '(city/product/trade regime/year)'
+new_r = ['& All Loan', 'Long term', 'Fin.Dev', 'Above', 'Below','Above', 'Below', 'Above', 'Below' ]
+lb.beautify(table_number = table_nb,
+            #reorder_var = reorder,
+            #multi_lines_dep = multi_lines_dep,
+            #new_row= new_r,
+            multicolumn = multicolumn,
+            table_nte = tbe1,
+            jupyter_preview = True,
+            resolution = 200,
+            folder = folder)
+```
+
+<!-- #region kernel="SoS" -->
+### Province level
+<!-- #endregion -->
+
+```sos kernel="SoS"
+folder = 'Tables_0'
+table_nb = 1
+table = 'table_{}'.format(table_nb)
+path = os.path.join(folder, table + '.txt')
+if os.path.exists(folder) == False:
+        os.mkdir(folder)
+for ext in ['.txt', '.tex', '.pdf']:
+    x = [a for a in os.listdir(folder) if a.endswith(ext)]
+    [os.remove(os.path.join(folder, i)) for i in x]
+```
+
+```sos kernel="R"
+%get path table
+## SO2
+t_0 <- felm(log(tso2) ~  
+            log(output) + log(employment) + log(capital) + 
+            log(lag_credit_supply) * credit_constraint
+           |  fe_p_i + fe_t_i + fe_p_t|0 | province_en + ind2, df_agg%>% filter(target_reduction_so2_p > 0),
+            exactDOF = TRUE)
+
+t_1 <- felm(log(tso2) ~  
+            log(output) + log(employment) + log(capital) + 
+            log(lag_credit_supply_long_term) * credit_constraint
+           |  fe_p_i + fe_t_i + fe_p_t|0 | province_en + ind2, df_agg%>% filter(target_reduction_so2_p > 0),
+            exactDOF = TRUE)
+
+t_2 <- felm(log(tso2) ~  
+            log(output) + log(employment) + log(capital) + 
+            log(fin_dev) * credit_constraint
+           |  fe_p_i + fe_t_i + fe_p_t|0 | province_en+ ind2, df_agg%>% filter(target_reduction_so2_p > 0),
+            exactDOF = TRUE)
+## COD
+t_3 <- felm(log(tcod) ~  
+            log(output) + log(employment) + log(capital) + 
+            log(lag_credit_supply) * credit_constraint
+           |  fe_p_i + fe_t_i + fe_p_t|0 | province_en + ind2, df_agg%>% filter(tcod > 0),
+            exactDOF = TRUE)
+
+t_4 <- felm(log(tcod) ~  
+            log(output) + log(employment) + log(capital) + 
+            log(lag_credit_supply_long_term) * credit_constraint
+           |  fe_p_i + fe_t_i + fe_p_t|0 | province_en + ind2, df_agg%>% filter(tcod > 0),
+            exactDOF = TRUE)
+
+t_5 <- felm(log(tcod) ~  
+            log(output) + log(employment) + log(capital) + 
+            log(fin_dev) * credit_constraint
+           |  fe_p_i + fe_t_i + fe_p_t|0 | province_en+ ind2, df_agg%>% filter(tcod > 0),
+            exactDOF = TRUE)
+## twaste water
+t_6 <- felm(log(twaste_water) ~  
+            log(output) + log(employment) + log(capital) + 
+            log(lag_credit_supply) * credit_constraint
+           |  fe_p_i + fe_t_i + fe_p_t|0 | province_en + ind2, df_agg%>% filter(twaste_water > 0),
+            exactDOF = TRUE)
+
+t_7 <- felm(log(twaste_water) ~  
+            log(output) + log(employment) + log(capital) + 
+            log(lag_credit_supply_long_term) * credit_constraint
+           |  fe_p_i + fe_t_i + fe_p_t|0 | province_en + ind2, df_agg%>% filter(twaste_water > 0),
+            exactDOF = TRUE)
+
+t_8 <- felm(log(twaste_water) ~  
+            log(output) + log(employment) + log(capital) + 
+            log(fin_dev) * credit_constraint
+           |  fe_p_i + fe_t_i + fe_p_t|0 | province_en+ ind2, df_agg%>% filter(twaste_water > 0),
+            exactDOF = TRUE)
+            
+dep <- "Dependent variable: SO2 emission"
+fe1 <- list(
+    c("Province-industry", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes"),
+    c("Province-industry", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes"),
+    c("Province-Time", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes")
+             )
+
+table_1 <- go_latex(list(
+    t_0,t_1, t_2, t_3, t_4, t_5, t_6, t_7, t_8
+),
+    title="Polution emission, credit supply and financial development",
     dep_var = dep,
     addFE=fe1,
     save=TRUE,
@@ -1731,6 +1896,25 @@ lb.beautify(table_number = table_nb,
 
 <!-- #region kernel="SoS" -->
 ## Table 6: Environmental policy and financial development
+
+$$
+\begin{aligned}
+\text{$S O 2_{p k t}=\alpha$ Financial Dependencies $_{k} \times \text{credit supply}_{pt} \times \text{policy mandate}_p +\mu_{p t}+\gamma_{k t}+\delta_{p k}+\epsilon_{p k t}$}
+\end{aligned}
+$$
+
+Environmental policy and financial development:  Aggregate at the province-industry-year level
+1. Evaluate the effect of credit constraint in provinces with stringent environmental policy
+  1. SO2
+    1. credit_constraint * target_reduction_so2_p * period
+    2. lag_credit_supply*credit_constraint * target_reduction_so2_p * period
+  2. COD
+      1. credit_constraint * target_reduction_co2_p * period
+      2. lag_credit_supply*credit_constraint * target_reduction_co2_p * period
+
+Message 
+* Capital within financially constrained industries have been relocated toward investment less harming for the environment (i.e. lower emission) in province with stringent environmental policy
+* One channel is the increase of the credit access → more loan availability in constraint industry
 <!-- #endregion -->
 
 ```sos kernel="SoS"
@@ -1745,84 +1929,118 @@ for ext in ['.txt', '.tex', '.pdf']:
     [os.remove(os.path.join(folder, i)) for i in x]
 ```
 
-```sos kernel="SoS"
-query = """
-WITH test AS (
-  SELECT 
-    DISTINCT(prov2013), 
-    target_reduction_so2_p 
-  FROM 
-    policy.china_city_reduction_mandate
-) 
-SELECT 
-  approx_percentile(
-    target_reduction_so2_p, ARRAY[.5, 
-    .75,.90,.95]
-  ) as array_policy, 
-  avg(target_reduction_so2_p) 
-FROM 
-  test
-"""
-#output = (s3.run_query(
-#            query=query,
-#            database=db,
-#            s3_output='SQL_OUTPUT_ATHENA',
-#    filename = 'temp'
-#        )
-#         )
-#output
-```
-
-```sos kernel="R"
-#var <- .75
-#df_temp_false = df_final %>% 
-#    mutate(
-#        dummy_policy = ifelse(target_reduction_so2_p >= 1.009, "TRUE", "FALSE"),
-#        dummy_policy_5 = ifelse(target_reduction_so2_p >= 0.83, "TRUE", "FALSE"),
-#        dummy_policy_75 = ifelse(target_reduction_so2_p >= 1.55, "TRUE", "FALSE"),
-#       dummy_policy_90 = ifelse(target_reduction_so2_p >= 2.28, "TRUE", "FALSE"),
-#        dummy_policy_95 = ifelse(target_reduction_so2_p >= 2.47, "TRUE", "FALSE"),
-#           )
-#dim(df_temp_false)
-```
-
 ```sos kernel="R"
 %get path table
 t_0 <- felm(log(tso2) ~  
-            log(lag_credit_supply) * credit_constraint * log(target_reduction_so2_p) * period
-           |  fe_c_i + fe_t_i + fe_c_t|0 | province_en, df_final%>% 
-             filter(tso2 > 500 & target_reduction_so2_p > 0),
+            credit_constraint * target_reduction_so2_p * period
+           |  fe_p_i + fe_t_i + fe_p_t|0 | province_en +ind2, df_agg%>% 
+             filter( target_reduction_so2_p > 0),
             exactDOF = TRUE)
 
 t_1 <- felm(log(tso2) ~  
-            log(lag_credit_supply_long_term) * credit_constraint * log(target_reduction_so2_p) * period
-           |  fe_c_i + fe_t_i + fe_c_t|0 | province_en, df_final%>% 
-             filter(tso2 > 500 & target_reduction_so2_p > 0),
+            log(lag_credit_supply)*credit_constraint * target_reduction_so2_p * period
+           |  fe_p_i + fe_t_i + fe_p_t|0 | province_en +ind2, df_agg%>% 
+             filter( target_reduction_so2_p > 0),
             exactDOF = TRUE)
 
-t_2 <- felm(log(tcod) ~  
-            log(lag_credit_supply) * credit_constraint * log(target_reduction_co2_p) * period
-           |  fe_c_i + fe_t_i + fe_c_t|0 | province_en, df_final%>% 
-             filter(tcod > 1098907647 & target_reduction_so2_p > 0),
-            exactDOF = TRUE)
-
-t_3 <- felm(log(tcod) ~  
-            log(lag_credit_supply_long_term) * credit_constraint * log(target_reduction_co2_p) * period
-           |  fe_c_i + fe_t_i + fe_c_t|0 | province_en, df_final%>% 
-             filter(tcod > 1098907647 & target_reduction_so2_p > 0),
+t_2 <- felm(log(tso2) ~  
+            log(lag_credit_supply_long_term)*credit_constraint * target_reduction_so2_p * period
+           |  fe_p_i + fe_t_i + fe_p_t|0 | province_en +ind2, df_agg%>% 
+             filter( target_reduction_so2_p > 0),
             exactDOF = TRUE)
 
 dep <- "Dependent variable: SO2 emission"
 fe1 <- list(
-    c("City-industry", "Yes", "Yes", "Yes", "Yes", "Yes"),
-    c("Time-industry", "Yes", "Yes", "Yes", "Yes", "Yes"),
-    c("City-Time", "Yes", "Yes", "Yes", "Yes", "Yes")
+    c("Province-industry", "Yes", "Yes", "Yes"),
+    c("Time-industry", "Yes", "Yes", "Yes", "Yes"),
+    c("Province-Time", "Yes", "Yes", "Yes")
              )
 
 table_1 <- go_latex(list(
-    t_0,t_1, t_2, t_3#, t_4
+    t_0,t_1, t_2
 ),
     title="SO2 emission reduction, credit constraint and policy mandate",
+    dep_var = dep,
+    addFE=fe1,
+    save=TRUE,
+    note = FALSE,
+    name=path
+)
+```
+
+```sos kernel="SoS"
+tbe1  = "This table estimates eq(3). " \
+"Heteroskedasticity-robust standard errors" \
+"clustered at the product level appear inparentheses."\
+"\sym{*} Significance at the 10\%, \sym{**} Significance at the 5\%, \sym{***} Significance at the 1\%."
+
+#multicolumn ={
+#    'Eligible': 2,
+#    'Non-Eligible': 1,
+#    'All': 1,
+#    'All benchmark': 1,
+#}
+
+#multi_lines_dep = '(city/product/trade regime/year)'
+#new_r = ['& test1', 'test2']
+
+reorder = {
+    6:0,
+    3:5
+    #0:2,
+    #1:3
+    #9:2,
+    #0:3,
+    #6:5
+    #14:5
+}
+
+lb.beautify(table_number = table_nb,
+            reorder_var = reorder,
+            #multi_lines_dep = multi_lines_dep,
+            #new_row= new_r,
+            #multicolumn = multicolumn,
+            table_nte = tbe1,
+            jupyter_preview = True,
+            resolution = 200,
+            folder = folder)
+```
+
+<!-- #region kernel="SoS" -->
+## Table 7: parallel trend
+<!-- #endregion -->
+
+```sos kernel="SoS"
+folder = 'Tables_0'
+table_nb = 1
+table = 'table_{}'.format(table_nb)
+path = os.path.join(folder, table + '.txt')
+if os.path.exists(folder) == False:
+        os.mkdir(folder)
+for ext in ['.txt', '.tex', '.pdf']:
+    x = [a for a in os.listdir(folder) if a.endswith(ext)]
+    [os.remove(os.path.join(folder, i)) for i in x]
+```
+
+```sos kernel="R"
+t_0 <- felm(log(tso2) ~  
+           credit_constraint * target_reduction_so2_p * year
+           |  fe_p_i + fe_t_i + fe_p_t|0 | province_en +ind2, df_agg%>% 
+             filter( target_reduction_so2_p > 0),
+            exactDOF = TRUE)
+
+
+dep <- "Dependent variable: SO2 emission"
+fe1 <- list(
+    c("Province-industry", "Yes"),
+    c("Province-industry", "Yes"),
+    c("Province-Time", "Yes")
+             )
+
+table_1 <- go_latex(list(
+    t_0
+),
+    title="parallel trend",
     dep_var = dep,
     addFE=fe1,
     save=TRUE,
@@ -1854,7 +2072,8 @@ lb.beautify(table_number = table_nb,
             table_nte = tbe1,
             jupyter_preview = True,
             resolution = 150,
-            folder = folder)
+            folder = folder,
+            parallel = True)
 ```
 
 <!-- #region kernel="SoS" nteract={"transient": {"deleting": false}} -->
