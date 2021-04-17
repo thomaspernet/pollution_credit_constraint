@@ -518,6 +518,14 @@ mutate(
 head(df_agg)
 ```
 
+<!-- #region kernel="R" -->
+## Variables Definition
+
+1. credit_supply: Province-year supply all loans over GDP
+2. credit_supply_long_term: Province-year supply long term loans over GDP
+3. fin_dev: Share of non-4-SOCBs' share in credit
+<!-- #endregion -->
+
 <!-- #region kernel="SoS" -->
 ## Table 1:Financial development over time
 
@@ -617,133 +625,11 @@ t_8 <- felm(log(twaste_water) ~
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr+ ind2, df_final%>% filter(twaste_water > 500),
             exactDOF = TRUE)
             
-dep <- "Dependent variable: SO2 emission"
+dep <- "Dependent variable: Pollution emission"
 fe1 <- list(
     c("City-industry", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes"),
     c("Time-industry", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes"),
     c("City-Time", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes")
-             )
-
-table_1 <- go_latex(list(
-    t_0,t_1, t_2, t_3, t_4, t_5, t_6, t_7, t_8
-),
-    title="Polution emission reduction, credit supply and financial development",
-    dep_var = dep,
-    addFE=fe1,
-    save=TRUE,
-    note = FALSE,
-    name=path
-) 
-```
-
-```sos kernel="SoS"
-tbe1  = "This table estimates eq(3). " \
-"Heteroskedasticity-robust standard errors" \
-"clustered at the product level appear inparentheses."\
-"All loan is the share of total loan normalised by the GDP. " \
-"Long-term loan is the share of long term loan normalised by the GDP. " \
-"Financial development is defined as the share of non-4-SOCBs' share in credit) " \
-"Column 4 to 9 splits cities based on the presence of SOEs firms. Above means the total output produced by "\
-"SOEs firms exceed the output of private firms. " \
-"\sym{*} Significance at the 10\%, \sym{**} Significance at the 5\%, \sym{***} Significance at the 1\%."
-
-multicolumn ={
-    'SO2': 3,
-    'COD': 3,
-    'Waste water': 3,
-}
-
-#multi_lines_dep = '(city/product/trade regime/year)'
-new_r = ['& All Loan', 'Long term', 'Fin.Dev', 'Above', 'Below','Above', 'Below', 'Above', 'Below' ]
-lb.beautify(table_number = table_nb,
-            #reorder_var = reorder,
-            #multi_lines_dep = multi_lines_dep,
-            #new_row= new_r,
-            multicolumn = multicolumn,
-            table_nte = tbe1,
-            jupyter_preview = True,
-            resolution = 200,
-            folder = folder)
-```
-
-<!-- #region kernel="SoS" -->
-### Province level
-<!-- #endregion -->
-
-```sos kernel="SoS"
-folder = 'Tables_0'
-table_nb = 1
-table = 'table_{}'.format(table_nb)
-path = os.path.join(folder, table + '.txt')
-if os.path.exists(folder) == False:
-        os.mkdir(folder)
-for ext in ['.txt', '.tex', '.pdf']:
-    x = [a for a in os.listdir(folder) if a.endswith(ext)]
-    [os.remove(os.path.join(folder, i)) for i in x]
-```
-
-```sos kernel="R"
-%get path table
-## SO2
-t_0 <- felm(log(tso2) ~  
-            log(output) + log(employment) + log(capital) + 
-            log(lag_credit_supply) * credit_constraint
-           |  fe_p_i + fe_t_i + fe_p_t|0 | province_en + ind2, df_agg%>% filter(target_reduction_so2_p > 0),
-            exactDOF = TRUE)
-
-t_1 <- felm(log(tso2) ~  
-            log(output) + log(employment) + log(capital) + 
-            log(lag_credit_supply_long_term) * credit_constraint
-           |  fe_p_i + fe_t_i + fe_p_t|0 | province_en + ind2, df_agg%>% filter(target_reduction_so2_p > 0),
-            exactDOF = TRUE)
-
-t_2 <- felm(log(tso2) ~  
-            log(output) + log(employment) + log(capital) + 
-            log(fin_dev) * credit_constraint
-           |  fe_p_i + fe_t_i + fe_p_t|0 | province_en+ ind2, df_agg%>% filter(target_reduction_so2_p > 0),
-            exactDOF = TRUE)
-## COD
-t_3 <- felm(log(tcod) ~  
-            log(output) + log(employment) + log(capital) + 
-            log(lag_credit_supply) * credit_constraint
-           |  fe_p_i + fe_t_i + fe_p_t|0 | province_en + ind2, df_agg%>% filter(tcod > 0),
-            exactDOF = TRUE)
-
-t_4 <- felm(log(tcod) ~  
-            log(output) + log(employment) + log(capital) + 
-            log(lag_credit_supply_long_term) * credit_constraint
-           |  fe_p_i + fe_t_i + fe_p_t|0 | province_en + ind2, df_agg%>% filter(tcod > 0),
-            exactDOF = TRUE)
-
-t_5 <- felm(log(tcod) ~  
-            log(output) + log(employment) + log(capital) + 
-            log(fin_dev) * credit_constraint
-           |  fe_p_i + fe_t_i + fe_p_t|0 | province_en+ ind2, df_agg%>% filter(tcod > 0),
-            exactDOF = TRUE)
-## twaste water
-t_6 <- felm(log(twaste_water) ~  
-            log(output) + log(employment) + log(capital) + 
-            log(lag_credit_supply) * credit_constraint
-           |  fe_p_i + fe_t_i + fe_p_t|0 | province_en + ind2, df_agg%>% filter(twaste_water > 0),
-            exactDOF = TRUE)
-
-t_7 <- felm(log(twaste_water) ~  
-            log(output) + log(employment) + log(capital) + 
-            log(lag_credit_supply_long_term) * credit_constraint
-           |  fe_p_i + fe_t_i + fe_p_t|0 | province_en + ind2, df_agg%>% filter(twaste_water > 0),
-            exactDOF = TRUE)
-
-t_8 <- felm(log(twaste_water) ~  
-            log(output) + log(employment) + log(capital) + 
-            log(fin_dev) * credit_constraint
-           |  fe_p_i + fe_t_i + fe_p_t|0 | province_en+ ind2, df_agg%>% filter(twaste_water > 0),
-            exactDOF = TRUE)
-            
-dep <- "Dependent variable: SO2 emission"
-fe1 <- list(
-    c("Province-industry", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes"),
-    c("Province-industry", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes"),
-    c("Province-Time", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes")
              )
 
 table_1 <- go_latex(list(
@@ -761,7 +647,7 @@ table_1 <- go_latex(list(
 ```sos kernel="SoS"
 tbe1  = "This table estimates eq(3). " \
 "Heteroskedasticity-robust standard errors" \
-"clustered at the product level appear inparentheses."\
+"clustered at the city-industry level appear in parentheses."\
 "All loan is the share of total loan normalised by the GDP. " \
 "Long-term loan is the share of long term loan normalised by the GDP. " \
 "Financial development is defined as the share of non-4-SOCBs' share in credit) " \
@@ -790,6 +676,38 @@ lb.beautify(table_number = table_nb,
 
 <!-- #region kernel="SoS" -->
 ## Table 2: heterogeneous effect: SOE vs Private
+
+City ownership are available for the following variables:
+
+- output
+- capital
+- employment
+- sales
+
+**How is it constructed**
+
+- city ownership public vs private
+    - Aggregate output by ownership and city
+    - A given city will have SOE asset tangibility and PRIVATE asset tangibility [output, employment, capital and sales]
+    - If asset tangibility SOE above Private then city is dominated by SOE
+
+Notebook reference: https://github.com/thomaspernet/Financial_dependency_pollution/blob/master/01_data_preprocessing/02_transform_tables/07_dominated_city_ownership.md
+
+Industrial are available for the following variables:
+
+- output
+- capital
+- employment
+- sales
+
+**Industrial size effect**
+- Change computation large vs small industry
+    - Compute the median (percentile) within a city taking all firms
+    - Compute the median (percentile) within a city-industry taking all firms within the industry
+    - For instance, Shanghai has 3 sectors, compute the median for Shanghai, and 3 median for each sector
+    
+
+Notebook reference: https://github.com/thomaspernet/Financial_dependency_pollution/blob/master/01_data_preprocessing/02_transform_tables/08_dominated_industry_ownership.md
 <!-- #endregion -->
 
 <!-- #region kernel="SoS" -->
@@ -851,7 +769,7 @@ t_5 <- felm(log(tso2) ~
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr+ ind2, df_final%>% filter(
                dominated_output_soe_c == FALSE & tso2 > 500),
             exactDOF = TRUE)
-dep <- "Dependent variable: SO2 emission"
+dep <- "Dependent variable: Pollution emission"
 fe1 <- list(
     c("City-industry", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes"),
     c("Time-industry", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes"),
@@ -861,7 +779,7 @@ fe1 <- list(
 table_1 <- go_latex(list(
     t_0,t_1, t_2, t_3, t_4, t_5
 ),
-    title="SO2 emission reduction, credit supply and financial development, City dominated public/private",
+    title="Pollution emission, credit supply and financial development, City dominated public/private",
     dep_var = dep,
     addFE=fe1,
     save=TRUE,
@@ -873,7 +791,7 @@ table_1 <- go_latex(list(
 ```sos kernel="SoS"
 tbe1  = "This table estimates eq(3). " \
 "Heteroskedasticity-robust standard errors" \
-"clustered at the product level appear inparentheses."\
+"clustered at the city-industry level appear in parentheses."\
 "All loan is the share of total loan normalised by the GDP. " \
 "Long-term loan is the share of long term loan normalised by the GDP. " \
 "Financial development is defined as the share of non-4-SOCBs' share in credit) " \
@@ -922,44 +840,44 @@ t_0 <- felm(log(tcod) ~
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(
-               dominated_output_soe_c == TRUE & tcod > 1098907647),
+               dominated_output_soe_c == TRUE & tcod > 0),
             exactDOF = TRUE)
 
 t_1 <- felm(log(tcod) ~  
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(
-               dominated_output_soe_c == FALSE & tcod > 1098907647),
+               dominated_output_soe_c == FALSE & tcod > 0),
             exactDOF = TRUE)
 
 t_2 <- felm(log(tcod) ~  
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply_long_term) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(
-               dominated_output_soe_c == TRUE & tcod > 1098907647),
+               dominated_output_soe_c == TRUE & tcod > 0),
             exactDOF = TRUE)
 
 t_3 <- felm(log(tcod) ~  
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply_long_term) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(
-               dominated_output_soe_c == FALSE & tcod > 1098907647),
+               dominated_output_soe_c == FALSE & tcod > 0),
             exactDOF = TRUE)
 
 t_4 <- felm(log(tcod) ~  
             log(output) + log(employment) + log(capital) + 
             log(fin_dev) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr+ ind2, df_final%>% filter(
-               dominated_output_soe_c == TRUE & tcod > 1098907647),
+               dominated_output_soe_c == TRUE & tcod > 0),
             exactDOF = TRUE)
 
 t_5 <- felm(log(tcod) ~  
             log(output) + log(employment) + log(capital) + 
             log(fin_dev) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr+ ind2, df_final%>% filter(
-               dominated_output_soe_c == FALSE & tcod > 1098907647),
+               dominated_output_soe_c == FALSE & tcod > 0),
             exactDOF = TRUE)
-dep <- "Dependent variable: SO2 emission"
+dep <- "Dependent variable: Pollution emission"
 fe1 <- list(
     c("City-industry", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes"),
     c("Time-industry", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes"),
@@ -981,7 +899,7 @@ table_1 <- go_latex(list(
 ```sos kernel="SoS"
 tbe1  = "This table estimates eq(3). " \
 "Heteroskedasticity-robust standard errors" \
-"clustered at the product level appear inparentheses."\
+"clustered at the city-industry level appear in parentheses."\
 "All loan is the share of total loan normalised by the GDP. " \
 "Long-term loan is the share of long term loan normalised by the GDP. " \
 "Financial development is defined as the share of non-4-SOCBs' share in credit) " \
@@ -1030,44 +948,44 @@ t_0 <- felm(log(twaste_water) ~
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(
-               dominated_output_soe_c == TRUE & twaste_water > 0),
+               dominated_output_soe_c == TRUE & twaste_water > 500),
             exactDOF = TRUE)
 
 t_1 <- felm(log(twaste_water) ~  
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(
-               dominated_output_soe_c == FALSE & twaste_water > 0),
+               dominated_output_soe_c == FALSE & twaste_water > 500),
             exactDOF = TRUE)
 
 t_2 <- felm(log(twaste_water) ~  
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply_long_term) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(
-               dominated_output_soe_c == TRUE & twaste_water > 0),
+               dominated_output_soe_c == TRUE & twaste_water > 500),
             exactDOF = TRUE)
 
 t_3 <- felm(log(twaste_water) ~  
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply_long_term) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(
-               dominated_output_soe_c == FALSE & twaste_water > 0),
+               dominated_output_soe_c == FALSE & twaste_water > 500),
             exactDOF = TRUE)
 
 t_4 <- felm(log(twaste_water) ~  
             log(output) + log(employment) + log(capital) + 
             log(fin_dev) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr+ ind2, df_final%>% filter(
-               dominated_output_soe_c == TRUE & twaste_water > 0),
+               dominated_output_soe_c == TRUE & twaste_water > 500),
             exactDOF = TRUE)
 
 t_5 <- felm(log(twaste_water) ~  
             log(output) + log(employment) + log(capital) + 
             log(fin_dev) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr+ ind2, df_final%>% filter(
-               dominated_output_soe_c == FALSE & twaste_water > 0),
+               dominated_output_soe_c == FALSE & twaste_water > 500),
             exactDOF = TRUE)
-dep <- "Dependent variable: SO2 emission"
+dep <- "Dependent variable: Waste water emission"
 fe1 <- list(
     c("City-industry", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes"),
     c("Time-industry", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes"),
@@ -1089,7 +1007,7 @@ table_1 <- go_latex(list(
 ```sos kernel="SoS"
 tbe1  = "This table estimates eq(3). " \
 "Heteroskedasticity-robust standard errors" \
-"clustered at the product level appear inparentheses."\
+"clustered at the city-industry level appear in parentheses."\
 "All loan is the share of total loan normalised by the GDP. " \
 "Long-term loan is the share of long term loan normalised by the GDP. " \
 "Financial development is defined as the share of non-4-SOCBs' share in credit) " \
@@ -1201,7 +1119,7 @@ table_1 <- go_latex(list(
 ```sos kernel="SoS"
 tbe1  = "This table estimates eq(3). " \
 "Heteroskedasticity-robust standard errors" \
-"clustered at the product level appear inparentheses."\
+"clustered at the city-industry level appear in parentheses."\
 "All loan is the share of total loan normalised by the GDP. " \
 "Long-term loan is the share of long term loan normalised by the GDP. " \
 "Financial development is defined as the share of non-4-SOCBs' share in credit) " \
@@ -1250,44 +1168,44 @@ t_0 <- felm(log(tcod) ~
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(
-               dominated_output_for_c == TRUE & tcod > 1098907647),
+               dominated_output_for_c == TRUE & tcod > 0),
             exactDOF = TRUE)
 
 t_1 <- felm(log(tcod) ~  
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(
-               dominated_output_for_c == FALSE & tcod > 1098907647),
+               dominated_output_for_c == FALSE & tcod > 0),
             exactDOF = TRUE)
 
 t_2 <- felm(log(tcod) ~  
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply_long_term) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(
-               dominated_output_for_c == TRUE & tcod > 1098907647),
+               dominated_output_for_c == TRUE & tcod > 0),
             exactDOF = TRUE)
 
 t_3 <- felm(log(tcod) ~  
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply_long_term) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(
-               dominated_output_for_c == FALSE & tcod > 1098907647),
+               dominated_output_for_c == FALSE & tcod > 0),
             exactDOF = TRUE)
 
 t_4 <- felm(log(tcod) ~  
             log(output) + log(employment) + log(capital) + 
             log(fin_dev) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr+ ind2, df_final%>% filter(
-               dominated_output_for_c == TRUE & tcod > 1098907647),
+               dominated_output_for_c == TRUE & tcod > 0),
             exactDOF = TRUE)
 
 t_5 <- felm(log(tcod) ~  
             log(output) + log(employment) + log(capital) + 
             log(fin_dev) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr+ ind2, df_final%>% filter(
-               dominated_output_for_c == FALSE & tcod > 1098907647),
+               dominated_output_for_c == FALSE & tcod > 0),
             exactDOF = TRUE)
-dep <- "Dependent variable: SO2 emission"
+dep <- "Dependent variable: C0D emission"
 fe1 <- list(
     c("City-industry", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes"),
     c("Time-industry", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes"),
@@ -1358,44 +1276,44 @@ t_0 <- felm(log(twaste_water) ~
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(
-               dominated_output_for_c == TRUE & twaste_water > 0),
+               dominated_output_for_c == TRUE & twaste_water > 500),
             exactDOF = TRUE)
 
 t_1 <- felm(log(twaste_water) ~  
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(
-               dominated_output_for_c == FALSE & twaste_water > 0),
+               dominated_output_for_c == FALSE & twaste_water > 500),
             exactDOF = TRUE)
 
 t_2 <- felm(log(twaste_water) ~  
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply_long_term) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(
-               dominated_output_for_c == TRUE & twaste_water > 0),
+               dominated_output_for_c == TRUE & twaste_water > 500),
             exactDOF = TRUE)
 
 t_3 <- felm(log(twaste_water) ~  
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply_long_term) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(
-               dominated_output_for_c == FALSE & twaste_water > 0),
+               dominated_output_for_c == FALSE & twaste_water > 500),
             exactDOF = TRUE)
 
 t_4 <- felm(log(twaste_water) ~  
             log(output) + log(employment) + log(capital) + 
             log(fin_dev) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr+ ind2, df_final%>% filter(
-               dominated_output_for_c == TRUE & twaste_water > 0),
+               dominated_output_for_c == TRUE & twaste_water > 500),
             exactDOF = TRUE)
 
 t_5 <- felm(log(twaste_water) ~  
             log(output) + log(employment) + log(capital) + 
             log(fin_dev) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr+ ind2, df_final%>% filter(
-               dominated_output_soe_c == FALSE & twaste_water > 0),
+               dominated_output_soe_c == FALSE & twaste_water > 500),
             exactDOF = TRUE)
-dep <- "Dependent variable: SO2 emission"
+dep <- "Dependent variable: Waste water emission"
 fe1 <- list(
     c("City-industry", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes"),
     c("Time-industry", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes"),
@@ -1417,7 +1335,7 @@ table_1 <- go_latex(list(
 ```sos kernel="SoS"
 tbe1  = "This table estimates eq(3). " \
 "Heteroskedasticity-robust standard errors" \
-"clustered at the product level appear inparentheses."\
+"clustered at the city-industry level appear in parentheses."\
 "All loan is the share of total loan normalised by the GDP. " \
 "Long-term loan is the share of long term loan normalised by the GDP. " \
 "Financial development is defined as the share of non-4-SOCBs' share in credit) " \
@@ -1536,7 +1454,7 @@ table_1 <- go_latex(list(
 ```sos kernel="SoS"
 tbe1  = "This table estimates eq(3). " \
 "Heteroskedasticity-robust standard errors" \
-"clustered at the product level appear inparentheses."\
+"clustered at the city-industry level appear in parentheses."\
 "All loan is the share of total loan normalised by the GDP. " \
 "Long-term loan is the share of long term loan normalised by the GDP. " \
 "Financial development is defined as the share of non-4-SOCBs' share in credit) " \
@@ -1592,42 +1510,42 @@ t_0 <- felm(log(tcod) ~
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_temp_true%>% filter(
-                tcod > 1098907647),
+                tcod > 0),
             exactDOF = TRUE)
 
 t_1 <- felm(log(tcod) ~  
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_temp_false%>% filter(
-              tcod > 1098907647),
+              tcod > 0),
             exactDOF = TRUE)
 
 t_2 <- felm(log(tcod) ~  
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply_long_term) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_temp_true%>% filter(
-                tcod > 1098907647),
+                tcod > 0),
             exactDOF = TRUE)
 
 t_3 <- felm(log(tcod) ~  
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply_long_term) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_temp_false%>% filter(
-               tcod > 1098907647),
+               tcod > 0),
             exactDOF = TRUE)
 
 t_4 <- felm(log(tcod) ~  
             log(output) + log(employment) + log(capital) + 
             log(fin_dev) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr+ ind2, df_temp_true%>% filter(
-                tcod > 1098907647),
+                tcod > 0),
             exactDOF = TRUE)
 
 t_5 <- felm(log(tcod) ~  
             log(output) + log(employment) + log(capital) + 
             log(fin_dev) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr+ ind2, df_temp_false%>% filter(
-                tcod > 1098907647),
+                tcod > 0),
             exactDOF = TRUE)
 dep <- "Dependent variable: SO2 emission"
 fe1 <- list(
@@ -1639,7 +1557,7 @@ fe1 <- list(
 table_1 <- go_latex(list(
     t_0,t_1, t_2, t_3, t_4, t_5
 ),
-    title="SO2 emission reduction, credit supply and financial development, Industry dominated Large vs Small",
+    title="COD emission reduction, credit supply and financial development, Industry dominated Large vs Small",
     dep_var = dep,
     addFE=fe1,
     save=TRUE,
@@ -1651,7 +1569,7 @@ table_1 <- go_latex(list(
 ```sos kernel="SoS"
 tbe1  = "This table estimates eq(3). " \
 "Heteroskedasticity-robust standard errors" \
-"clustered at the product level appear inparentheses."\
+"clustered at the city-industry level appear in parentheses."\
 "All loan is the share of total loan normalised by the GDP. " \
 "Long-term loan is the share of long term loan normalised by the GDP. " \
 "Financial development is defined as the share of non-4-SOCBs' share in credit) " \
@@ -1707,44 +1625,44 @@ t_0 <- felm(log(twaste_water) ~
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_temp_true%>% filter(
-                twaste_water > 0),
+                twaste_water > 500),
             exactDOF = TRUE)
 
 t_1 <- felm(log(twaste_water) ~  
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_temp_false%>% filter(
-                twaste_water > 0),
+                twaste_water > 500),
             exactDOF = TRUE)
 
 t_2 <- felm(log(twaste_water) ~  
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply_long_term) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_temp_true%>% filter(
-               twaste_water > 0),
+               twaste_water > 500),
             exactDOF = TRUE)
 
 t_3 <- felm(log(twaste_water) ~  
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply_long_term) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_temp_false%>% filter(
-               twaste_water > 0),
+               twaste_water > 500),
             exactDOF = TRUE)
 
 t_4 <- felm(log(twaste_water) ~  
             log(output) + log(employment) + log(capital) + 
             log(fin_dev) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr+ ind2, df_temp_true%>% filter(
-                twaste_water > 0),
+                twaste_water > 500),
             exactDOF = TRUE)
 
 t_5 <- felm(log(twaste_water) ~  
             log(output) + log(employment) + log(capital) + 
             log(fin_dev) * credit_constraint
            |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr+ ind2, df_temp_false%>% filter(
-                twaste_water > 0),
+                twaste_water > 500),
             exactDOF = TRUE)
-dep <- "Dependent variable: SO2 emission"
+dep <- "Dependent variable: Waste water emission"
 fe1 <- list(
     c("City-industry", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes"),
     c("Time-industry", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes"),
@@ -1754,7 +1672,7 @@ fe1 <- list(
 table_1 <- go_latex(list(
     t_0,t_1, t_2, t_3, t_4, t_5
 ),
-    title="SO2 emission reduction, credit supply and financial development, Industry dominated Large vs Small",
+    title="Waste water emission reduction, credit supply and financial development, Industry dominated Large vs Small",
     dep_var = dep,
     addFE=fe1,
     save=TRUE,
@@ -1766,7 +1684,7 @@ table_1 <- go_latex(list(
 ```sos kernel="SoS"
 tbe1  = "This table estimates eq(3). " \
 "Heteroskedasticity-robust standard errors" \
-"clustered at the product level appear inparentheses."\
+"clustered at the city-industry level appear in parentheses."\
 "All loan is the share of total loan normalised by the GDP. " \
 "Long-term loan is the share of long term loan normalised by the GDP. " \
 "Financial development is defined as the share of non-4-SOCBs' share in credit) " \
@@ -1867,7 +1785,7 @@ table_1 <- go_latex(list(
 ```sos kernel="SoS"
 tbe1  = "This table estimates eq(3). " \
 "Heteroskedasticity-robust standard errors" \
-"clustered at the product level appear inparentheses."\
+"clustered at the city-industry level appear in parentheses."\
 "All loan is the share of total loan normalised by the GDP. " \
 "Long-term loan is the share of long term loan normalised by the GDP. " \
 "Financial development is defined as the share of non-4-SOCBs' share in credit) " \
@@ -1908,9 +1826,9 @@ Environmental policy and financial development:  Aggregate at the province-indus
   1. SO2
     1. credit_constraint * target_reduction_so2_p * period
     2. lag_credit_supply*credit_constraint * target_reduction_so2_p * period
-  2. COD
-      1. credit_constraint * target_reduction_co2_p * period
-      2. lag_credit_supply*credit_constraint * target_reduction_co2_p * period
+  2. ~COD~
+      1. ~credit_constraint * target_reduction_co2_p * period~
+      2. ~lag_credit_supply*credit_constraint * target_reduction_co2_p * period~
 
 Message 
 * Capital within financially constrained industries have been relocated toward investment less harming for the environment (i.e. lower emission) in province with stringent environmental policy
@@ -1928,6 +1846,10 @@ for ext in ['.txt', '.tex', '.pdf']:
     x = [a for a in os.listdir(folder) if a.endswith(ext)]
     [os.remove(os.path.join(folder, i)) for i in x]
 ```
+
+<!-- #region kernel="SoS" -->
+### Province level
+<!-- #endregion -->
 
 ```sos kernel="R"
 %get path table
@@ -2089,75 +2011,17 @@ path = os.getcwd()
 parent_path = str(Path(path).parent.parent.parent)
 sys.path.append(os.path.join(parent_path, 'utils'))
 import make_toc
+import create_report
 ```
 
 ```sos kernel="python3"
 name_json = 'parameters_ETL_pollution_credit_constraint.json'
 path_json = os.path.join(str(Path(path).parent.parent), 'utils',name_json)
+notebookname = "00_credit_supply.ipynb"
 ```
 
-```sos kernel="python3" nteract={"transient": {"deleting": false}} outputExpanded=false
-def create_report(extension = "html", keep_code = False, notebookname = None):
-    """
-    Create a report from the current notebook and save it in the 
-    Report folder (Parent-> child directory)
-    
-    1. Exctract the current notbook name
-    2. Convert the Notebook 
-    3. Move the newly created report
-    
-    Args:
-    extension: string. Can be "html", "pdf", "md"
-    
-    
-    """
-    
-    ### Get notebook name
-    connection_file = os.path.basename(ipykernel.get_connection_file())
-    kernel_id = connection_file.split('-', 1)[0].split('.')[0]
-
-    for srv in notebookapp.list_running_servers():
-        try:
-            if srv['token']=='' and not srv['password']:  
-                req = urllib.request.urlopen(srv['url']+'api/sessions')
-            else:
-                req = urllib.request.urlopen(srv['url']+ \
-                                             'api/sessions?token=' + \
-                                             srv['token'])
-            sessions = json.load(req)
-            notebookname = sessions[0]['name']
-        except:
-            notebookname = notebookname  
-    
-    sep = '.'
-    path = os.getcwd()
-    #parent_path = str(Path(path).parent)
-    
-    ### Path report
-    #path_report = "{}/Reports".format(parent_path)
-    #path_report = "{}/Reports".format(path)
-    
-    ### Path destination
-    name_no_extension = notebookname.split(sep, 1)[0]
-    source_to_move = name_no_extension +'.{}'.format(extension)
-    dest = os.path.join(path,'Reports', source_to_move)
-    
-    ### Generate notebook
-    if keep_code:
-        os.system('jupyter nbconvert --to {} {}'.format(
-    extension,notebookname))
-    else:
-        os.system('jupyter nbconvert --no-input --to {} {}'.format(
-    extension,notebookname))
-    
-    ### Move notebook to report folder
-    #time.sleep(5)
-    shutil.move(source_to_move, dest)
-    print("Report Available at this adress:\n {}".format(dest))
-```
-
-```sos kernel="python3" nteract={"transient": {"deleting": false}} outputExpanded=false
-create_report(extension = "html", keep_code = False, notebookname = "00_credit_supply.ipynb")
+```sos kernel="python3"
+create_report.create_report(extension = "html", keep_code = False, notebookname =  notebookname)
 ```
 
 ```sos kernel="python3"
