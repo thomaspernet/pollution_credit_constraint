@@ -823,5 +823,6 @@ path_json = os.path.join(str(Path(path).parent.parent), 'utils',name_json)
 ```
 
 ```sos kernel="python3" nteract={"transient": {"deleting": false}} outputExpanded=false
-create_report.create_report(extension = "html", keep_code = False, notebookname = None)
+create_report.create_report(extension = "html", keep_code = False,
+                            notebookname = "00_final_publishable_tables_figures.ipynb")
 ```
