@@ -43,6 +43,11 @@ Study how a bank’s involvement in a firm's financing may be in line with envir
        - [00_baseline_credit_constraint_n_supply.md](https://github.com/thomaspernet/pollution_credit_constraint/tree/master/02_data_analysis/01_model_estimation/02_baseline_tables/00_baseline_credit_constraint_n_supply.md)
        - **Reports/**
          - [00_baseline_credit_constraint_n_supply.html](https://htmlpreview.github.io/?https://github.com/thomaspernet/pollution_credit_constraint/blob/master/02_data_analysis/01_model_estimation/02_baseline_tables/Reports/00_baseline_credit_constraint_n_supply.html)
+   - **02_statistical_tables/**
+     - [00_final_publishable_tables_figures.md](https://github.com/thomaspernet/pollution_credit_constraint/tree/master/02_data_analysis/02_statistical_tables/00_final_publishable_tables_figures.md)
+     - [README.md](https://github.com/thomaspernet/pollution_credit_constraint/tree/master/02_data_analysis/02_statistical_tables/README.md)
+     - **Reports/**
+       - [00_final_publishable_tables_figures.html](https://htmlpreview.github.io/?https://github.com/thomaspernet/pollution_credit_constraint/blob/master/02_data_analysis/02_statistical_tables/Reports/00_final_publishable_tables_figures.html)
  - **utils/**
    - [README.md](https://github.com/thomaspernet/pollution_credit_constraint/tree/master/utils/README.md)
    - [create_report.py](https://github.com/thomaspernet/pollution_credit_constraint/tree/master/utils/create_report.py)
