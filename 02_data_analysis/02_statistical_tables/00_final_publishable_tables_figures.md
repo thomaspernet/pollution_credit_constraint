@@ -591,89 +591,156 @@ plt.savefig("Figures/fig_3.png",
 <!-- #endregion -->
 
 ```sos kernel="R"
-#options(warn=-1)
-#library(tidyverse)
-#library(lfe)
-#library(lazyeval)
-#library('progress')
+options(warn=-1)
+library(tidyverse)
+library(lfe)
+library(lazyeval)
+library('progress')
 #path = "../../../utils/latex/table_golatex.R"
 ```
 
 ```sos kernel="SoS"
-#import os
-#from pathlib import Path
-#filename = 'df_{}'.format("fin_dep_pollution_baseline_industry")
-#path = os.getcwd()
-#path_local = os.path.join(str(Path(path).parent.parent), 
-#                              "00_data_catalog/temporary_local_data")
-#df_path = os.path.join(path_local, filename + '.csv')
+import os
+from pathlib import Path
+filename = 'df_{}'.format("fin_dep_pollution_baseline_industry")
+path = os.getcwd()
+path_local = os.path.join(str(Path(path).parent.parent), 
+                              "00_data_catalog/temporary_local_data")
+df_path = os.path.join(path_local, filename + '.csv')
 ```
 
 ```sos kernel="R"
-#%get df_path
-#df_final <- read_csv(df_path) %>%
-#mutate_if(is.character, as.factor) %>%
-#    mutate_at(vars(starts_with("fe")), as.factor) %>%
-#mutate(
-#    year = relevel(as.factor(year), ref='2001'),
-#    period = relevel(as.factor(period), ref='FALSE'),
-#    polluted_d50i = relevel(as.factor(polluted_d50i), ref='BELOW'),
-#    polluted_d75i = relevel(as.factor(polluted_d75i), ref='BELOW'),
-#    polluted_d80i = relevel(as.factor(polluted_d80i), ref='BELOW'),
-#    polluted_d85i = relevel(as.factor(polluted_d85i), ref='BELOW'),
-#    polluted_d90i = relevel(as.factor(polluted_d90i), ref='BELOW'),
-#    polluted_d95i = relevel(as.factor(polluted_d95i), ref='BELOW'),
-#    polluted_mi = relevel(as.factor(polluted_mi), ref='BELOW'),
-#    d_avg_ij_o_city_mandate = relevel(as.factor(d_avg_ij_o_city_mandate), ref="FALSE"),
-#   fin_dev = 1- share_big_loan,
-#    lag_fin_dev = 1- lag_share_big_loan,
-#)%>%
-#group_by(province_en, ind2, year, period, fe_p_i , fe_t_i , fe_p_t) %>%
-#summarize(
-#    tso2 = sum(tso2),
-#    tcod = sum(tcod),
-#   twaste_water = sum(twaste_water),
-#    output = sum(output),
-#    employment = sum(employment),
-#    capital = sum(capital),
-#    target_reduction_so2_p = max(target_reduction_so2_p),
-#    target_reduction_co2_p = max(target_reduction_co2_p),
-#    lag_credit_supply = max(lag_credit_supply),
-#    lag_credit_supply_long_term = max(lag_credit_supply_long_term),
-#    fin_dev = max(fin_dev),
-#    lag_fin_dev = max(lag_fin_dev),
-#   credit_constraint = max(credit_constraint),
-#) %>%
-#ungroup()%>%
-#mutate(
-#    year = relevel(as.factor(year), ref='2001'),
-#    year1 = relevel(as.factor(year), ref='2005')
-#)
+%get df_path
+df_final <- read_csv(df_path) %>%
+mutate_if(is.character, as.factor) %>%
+    mutate_at(vars(starts_with("fe")), as.factor) %>%
+mutate(
+    year = relevel(as.factor(year), ref='2001'),
+    period = relevel(as.factor(period), ref='FALSE'),
+    polluted_d50i = relevel(as.factor(polluted_d50i), ref='BELOW'),
+    polluted_d75i = relevel(as.factor(polluted_d75i), ref='BELOW'),
+    polluted_d80i = relevel(as.factor(polluted_d80i), ref='BELOW'),
+    polluted_d85i = relevel(as.factor(polluted_d85i), ref='BELOW'),
+    polluted_d90i = relevel(as.factor(polluted_d90i), ref='BELOW'),
+    polluted_d95i = relevel(as.factor(polluted_d95i), ref='BELOW'),
+    polluted_mi = relevel(as.factor(polluted_mi), ref='BELOW'),
+    d_avg_ij_o_city_mandate = relevel(as.factor(d_avg_ij_o_city_mandate), ref="FALSE"),
+   fin_dev = 1- share_big_loan,
+    lag_fin_dev = 1- lag_share_big_loan,
+)%>%
+group_by(province_en, ind2, year, period, fe_p_i , fe_t_i , fe_p_t) %>%
+summarize(
+    tso2 = sum(tso2),
+    tcod = sum(tcod),
+   twaste_water = sum(twaste_water),
+    output = sum(output),
+    employment = sum(employment),
+    capital = sum(capital),
+    target_reduction_so2_p = max(target_reduction_so2_p),
+    target_reduction_co2_p = max(target_reduction_co2_p),
+    lag_credit_supply = max(lag_credit_supply),
+    lag_credit_supply_long_term = max(lag_credit_supply_long_term),
+    fin_dev = max(fin_dev),
+    lag_fin_dev = max(lag_fin_dev),
+   credit_constraint = max(credit_constraint),
+) %>%
+ungroup()%>%
+mutate(
+    year = relevel(as.factor(year), ref='2005'),
+    year1 = relevel(as.factor(year), ref='2005')
+)
 
-#head(df_final)
+head(df_final)
 ```
 
 ```sos kernel="R"
-#t_0 <- felm(log(tso2) ~  
-#           credit_constraint * target_reduction_so2_p * year
-#           |  fe_p_i + fe_t_i + fe_p_t|0 | province_en +ind2, df_final%>% 
-#             filter( target_reduction_so2_p > 0),
-#            exactDOF = TRUE)
-
-#dep <- "Dependent variable: SO2 emission"
-#fe1 <- list(
-#    c("Province-industry", "Yes"),
-#    c("Province-industry", "Yes"),
-#    c("Province-Time", "Yes")
-#            )
+t_0 <- felm(log(tso2) ~  
+           credit_constraint * target_reduction_so2_p * year
+           |  fe_p_i + fe_t_i + fe_p_t|0 | province_en +ind2, df_final%>% 
+             filter( target_reduction_so2_p > 0),
+            exactDOF = TRUE)
 ```
 
 ```sos kernel="R"
-#summary(t_0)
+na.omit(summary(t_0)$coef)
 ```
 
 ```sos kernel="R"
-#t_0$coef
+write.csv(na.omit(summary(t_0)$coef),"standard_errors.csv")
+```
+
+```sos kernel="python3"
+pd.DataFrame(
+    data = [['', '', '', '', '', '2005', '', '', '']],
+    columns=['var', 'Estimate', 'Cluster s.e.', 't value', 'Pr(>|t|)', 'year',
+       'test', 'st_error_upper', 'st_error_lower']
+)
+```
+
+```sos kernel="python3"
+df_sd.columns
+```
+
+```sos kernel="python3"
+df_sd = (
+    pd.read_csv("standard_errors.csv")
+    .rename(columns={"Unnamed: 0": "var"})
+    .assign(
+        year=lambda x: x["var"]
+        .str.split(":")
+        .apply(lambda x: x[-1])
+        .str.extract("(\d+)"),
+        test=lambda x: 1.96 * x["Cluster s.e."],
+        st_error_upper=lambda x: x["Estimate"] + 1.96 * x["Cluster s.e."],
+        st_error_lower=lambda x: x["Estimate"] - 1.96 * x["Cluster s.e."],
+    )
+    .append(
+        pd.DataFrame(
+            data=[["", np.nan, "", "", "", "2005", "", np.nan, np.nan]],
+            columns=[
+                "var",
+                "Estimate",
+                "Cluster s.e.",
+                "t value",
+                "Pr(>|t|)",
+                "year",
+                "test",
+                "st_error_upper",
+                "st_error_lower",
+            ],
+        )
+    )
+    .sort_values(by=["year"])
+)
+df_sd
+```
+
+```sos kernel="python3"
+sns.set(color_codes=True)
+sns.set_style("white")
+```
+
+<!-- #region kernel="python3" -->
+Only the years with confidence intervervales different from 0 are significant
+<!-- #endregion -->
+
+```sos kernel="python3"
+sns.color_palette()[1]
+```
+
+```sos kernel="python3"
+fig, ax = plt.subplots(figsize=(10, 8))
+for lower,upper,y in zip(df_sd['st_error_lower'],df_sd['st_error_upper'],df_sd['year']):
+    plt.plot((y,y),(lower,upper),'ro-')
+plt.plot(df_sd['year'], df_sd['Estimate'], 'ro')
+plt.axhline(linewidth=1, color='r')
+ax.axvline(x='2005', c='black', linestyle = '--')
+plt.xlabel('Year')
+plt.ylabel("Estimated coefficient")
+ax.spines['right'].set_visible(False)
+ax.spines['top'].set_visible(False)
+plt.xticks(rotation=30)
+plt.title('Parallel trend assumption')
 ```
 
 <!-- #region kernel="R" -->
