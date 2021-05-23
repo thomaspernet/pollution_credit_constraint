@@ -670,18 +670,6 @@ write.csv(na.omit(summary(t_0)$coef),"standard_errors.csv")
 ```
 
 ```sos kernel="python3"
-pd.DataFrame(
-    data = [['', '', '', '', '', '2005', '', '', '']],
-    columns=['var', 'Estimate', 'Cluster s.e.', 't value', 'Pr(>|t|)', 'year',
-       'test', 'st_error_upper', 'st_error_lower']
-)
-```
-
-```sos kernel="python3"
-df_sd.columns
-```
-
-```sos kernel="python3"
 df_sd = (
     pd.read_csv("standard_errors.csv")
     .rename(columns={"Unnamed: 0": "var"})
@@ -723,10 +711,6 @@ sns.set_style("white")
 <!-- #region kernel="python3" -->
 Only the years with confidence intervervales different from 0 are significant
 <!-- #endregion -->
-
-```sos kernel="python3"
-sns.color_palette()[1]
-```
 
 ```sos kernel="python3"
 fig, ax = plt.subplots(figsize=(10, 8))
@@ -810,7 +794,6 @@ df_latex = (
     count = lambda x: x['count'].astype(int))
     .to_latex()
 )
-df_latex
 ```
 
 ```sos kernel="python3"
