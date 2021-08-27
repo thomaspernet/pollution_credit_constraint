@@ -84,8 +84,8 @@ parent_path = str(Path(path).parent.parent)
 
 
 name_credential = 'financial_dep_SO2_accessKeys.csv'
-region = 'eu-west-3'
-bucket = 'datalake-datascience'
+region = 'eu-west-2'
+bucket = 'datalake-london'
 path_cred = "{0}/creds/{1}".format(parent_path, name_credential)
 ```
 
@@ -457,7 +457,7 @@ plt.xlabel('Year')
 # Set y-axis label
 plt.ylabel('SO2 (10.000 tons)')
 plt.xticks(rotation=30)
-plt.title('SO2 emission in China from 2000 to 2010')
+#plt.title('SO2 emission in China from 2000 to 2010')
 #plt.show()
 plt.savefig("Figures/fig_1.png",
             bbox_inches='tight',
@@ -501,7 +501,7 @@ plt.ylabel("share of non-4-SOCBs' share in total credit")
 ax.spines['right'].set_visible(False)
 ax.spines['top'].set_visible(False)
 plt.xticks(rotation=30)
-plt.title('Evolution of share of non-state bank in total loan')
+#plt.title('Evolution of share of non-state bank in total loan')
 #plt.show()
 plt.savefig("Figures/fig_2.png",
             bbox_inches='tight',
@@ -576,7 +576,7 @@ plt.figure(figsize=(10, 8))
 ax = sns.lmplot(x='target',
            y="pct_change",
            data=df.loc[lambda x: ~x['key'].isin(['Qinghai'])])
-plt.title('Relationship between policy mandate and variation of SO2 between 2002 and 2007')
+#plt.title('Relationship between policy mandate and variation of SO2 between 2002 and 2007')
 # Set x-axis label
 plt.xlabel('Provincial Reduction Target (10.000 tons)')
 # Set y-axis label
@@ -724,7 +724,11 @@ plt.ylabel("Estimated coefficient")
 ax.spines['right'].set_visible(False)
 ax.spines['top'].set_visible(False)
 plt.xticks(rotation=30)
-plt.title('Parallel trend assumption')
+#plt.title('Parallel trend assumption')
+
+plt.savefig("Figures/fig_4.png",
+            bbox_inches='tight',
+            dpi=600)
 ```
 
 <!-- #region kernel="R" -->

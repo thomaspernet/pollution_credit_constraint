@@ -1,0 +1,41 @@
+\documentclass[preview]{standalone} 
+\usepackage[utf8]{inputenc}
+\usepackage{booktabs,caption,threeparttable, siunitx, adjustbox}
+
+\begin{document}
+\begin{table}[!htbp] \centering
+\caption{Summary statistics}
+
+\begin{adjustbox}{width=\textwidth, totalheight=\textheight-2\baselineskip,keepaspectratio}
+\begin{tabular}{lrrrrrrrr}
+\toprule
+{} &  count &    mean &      std &   min &    25\% &    50\% &     75\% &       max \\
+\midrule
+SO2                   &  41505 &  130.88 &   487.02 &  0.05 &   2.37 &  12.04 &   60.16 &  13701.62 \\
+All loan              &  41505 &    0.86 &     0.26 &  0.45 &   0.68 &   0.81 &    0.97 &      2.99 \\
+Long-term loan        &  41505 &    0.32 &     0.17 &  0.09 &   0.20 &   0.28 &    0.43 &      1.74 \\
+Financial development &  28206 &    0.45 &     0.08 &  0.16 &   0.41 &   0.45 &    0.50 &      0.61 \\
+Output                &  41505 &  295.39 &  1142.54 &  0.00 &  15.82 &  57.59 &  205.06 &  77324.41 \\
+Employment            &  41505 &    9.46 &    21.98 &  0.00 &   1.13 &   3.27 &    8.92 &   1120.25 \\
+Capital               &  41505 &   66.18 &   204.75 &  0.00 &   4.38 &  15.72 &   52.07 &   7493.93 \\
+credit constraint     &  41505 &   -0.52 &     0.61 & -2.59 &  -0.72 &  -0.44 &   -0.23 &      0.62 \\
+S02 mandate           &  41505 &    1.47 &     1.07 &  0.00 &   0.56 &   1.44 &    2.25 &      4.01 \\
+\bottomrule
+\end{tabular}
+
+\end{adjustbox}
+
+\begin{tablenotes}
+\small
+\item
+The information about the SO2 level is collected using various editions of the China Environment Statistics Yearbook and is reported in millions of tons.
+S02 mandate is the reduction mandate imposed by the centra government to each province in China.
+Financial development is the share of non-state bank in total loan. Available from 1998 to 2004; All loan and long term loan are the total loan and total of long term loan supplied
+normalised by the province GDP.
+credit constraint is the measure of financial external dependency. Larger values indicate stronger dependence to credit.
+output is measured in ,  employment is measured in and Capital 
+
+\end{tablenotes}
+\end{table}
+
+\end{document}
