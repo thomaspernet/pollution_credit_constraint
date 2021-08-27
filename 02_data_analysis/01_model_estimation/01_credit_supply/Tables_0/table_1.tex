@@ -1,0 +1,47 @@
+
+\documentclass[preview]{standalone} 
+\usepackage[utf8]{inputenc}
+\usepackage{booktabs,caption,threeparttable, siunitx, adjustbox}
+
+\begin{document}% Date and time \times  Fri, Aug 27, 2021 - 05 \times 22 \times 48
+\begin{table}[!htbp] \centering 
+  \caption{Pollution emission, credit supply and financial development} 
+\label{}
+\begin{adjustbox}{width=\textwidth, totalheight=\textheight-2\baselineskip,keepaspectratio}
+\begin{tabular}{@{\extracolsep{5pt}}lcccccc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+ & \multicolumn{6}{c}{Dependent variable: Pollution emission} \\ 
+\cline{2-7} 
+\\[-1.8ex] & (1) & (2) & (3) & (4) & (5) & (6)\\ 
+\hline \\[-1.8ex] 
+ log(output) & 0.034 & 0.034 & 0.069$^{**}$ & 0.019 & 0.019 & 0.069$^{**}$ \\ 
+  & (0.025) & (0.025) & (0.027) & (0.030) & (0.030) & (0.031) \\ 
+  log(employment) & 0.198$^{***}$ & 0.198$^{***}$ & 0.120$^{***}$ & 0.228$^{***}$ & 0.228$^{***}$ & 0.140$^{***}$ \\ 
+  & (0.026) & (0.026) & (0.033) & (0.031) & (0.031) & (0.035) \\ 
+  log(capital) & 0.013 & 0.014 & $-$0.012 & 0.020 & 0.020 & $-$0.010 \\ 
+  & (0.016) & (0.016) & (0.022) & (0.019) & (0.019) & (0.021) \\ 
+  log(\text{All loan}_{pt}) \times \text{credit constraint} & $-$0.245$^{***}$ &  &  & $-$0.221$^{***}$ &  &  \\ 
+  & (0.076) &  &  & (0.077) &  &  \\ 
+  log(\text{Long-term loan}_{pt}) \times \text{credit constraint} &  & $-$0.133$^{**}$ &  &  & $-$0.112$^{*}$ &  \\ 
+  &  & (0.060) &  &  & (0.064) &  \\ 
+  log(\text{financial development}_{pt}) \times \text{credit constraint} &  &  & $-$0.191$^{**}$ &  &  & $-$0.219$^{**}$ \\ 
+  &  &  & (0.078) &  &  & (0.083) \\ 
+ \hline \\[-1.8ex] 
+City-industry & Yes & Yes & Yes & Yes & Yes & Yes \\ 
+Time-industry & Yes & Yes & Yes & Yes & Yes & Yes \\ 
+City-Time & Yes & Yes & Yes & Yes & Yes & Yes \\ 
+Observations & 41,505 & 41,505 & 28,206 & 33,989 & 33,989 & 23,186 \\ 
+R$^{2}$ & 0.854 & 0.854 & 0.877 & 0.848 & 0.848 & 0.869 \\ 
+\hline 
+\hline \\[-1.8ex] 
+\end{tabular}
+\end{adjustbox}
+\begin{tablenotes} 
+ \small 
+ \item \\ 
+This table estimates eq(1). All loan is the share of total loan normalised by the GDP. Long-term loan is the share of long term loan normalised by the GDP. Financial development is defined as the share of non-4-SOCBs' share in credit) Columns 4 to 6 exclude the top and bottom 3 most polluted sectors in 1998 \sym{*} Significance at the 10\%, \sym{**} Significance at the 5\%, \sym{***} Significance at the 1\%.Heteroskedasticity-robust standard errors clustered at the city-industry level appear in parentheses. 
+\end{tablenotes}
+\end{table}
+
+\end{document}

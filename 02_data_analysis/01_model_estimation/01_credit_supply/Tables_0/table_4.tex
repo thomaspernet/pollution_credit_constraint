@@ -1,0 +1,48 @@
+
+\documentclass[preview]{standalone} 
+\usepackage[utf8]{inputenc}
+\usepackage{booktabs,caption,threeparttable, siunitx, adjustbox}
+
+\begin{document}% Date and time \times  Fri, Aug 27, 2021 - 05 \times 22 \times 57
+\begin{table}[!htbp] \centering 
+  \caption{SO2 emission reduction, credit supply and financial development} 
+\label{}
+\begin{adjustbox}{width=\textwidth, totalheight=\textheight-2\baselineskip,keepaspectratio}
+\begin{tabular}{@{\extracolsep{5pt}}lcccccc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+ & \multicolumn{6}{c}{Dependent variable: SO2 emission} \\ 
+\cline{2-7} 
+\\[-1.8ex] & (1) & (2) & (3) & (4) & (5) & (6)\\
+ \\[-1.8ex]& No TCZ & TCZ & No TCZ & TCZ & No TCZ & TCZ\\
+ \hline \\[-1.8ex] 
+ log(output) & 0.040 & 0.033 & 0.040 & 0.033 & 0.065 & 0.084$^{**}$ \\ 
+  & (0.034) & (0.029) & (0.034) & (0.029) & (0.048) & (0.033) \\ 
+  log(employment) & 0.166$^{***}$ & 0.222$^{***}$ & 0.165$^{***}$ & 0.222$^{***}$ & 0.080 & 0.146$^{***}$ \\ 
+  & (0.039) & (0.039) & (0.039) & (0.039) & (0.050) & (0.044) \\ 
+  log(capital) & 0.023 & 0.004 & 0.023 & 0.004 & 0.016 & $-$0.039 \\ 
+  & (0.022) & (0.021) & (0.022) & (0.021) & (0.026) & (0.029) \\ 
+  log(\text{All loan}_{pt}) \times \text{credit constraint} & $-$0.026 & $-$0.313$^{***}$ &  &  &  &  \\ 
+  & (0.177) & (0.083) &  &  &  &  \\ 
+  log(\text{Long-term loan}_{pt}) \times \text{credit constraint} &  &  & $-$0.177 & $-$0.090 &  &  \\ 
+  &  &  & (0.122) & (0.065) &  &  \\ 
+  log(\text{financial development}_{pt}) \times \text{credit constraint} &  &  &  &  & $-$0.029 & $-$0.248$^{***}$ \\ 
+  &  &  &  &  & (0.322) & (0.074) \\ 
+ \hline \\[-1.8ex] 
+City-industry & Yes & Yes & Yes & Yes & Yes & Yes \\ 
+Time-industry & Yes & Yes & Yes & Yes & Yes & Yes \\ 
+City-Time & Yes & Yes & Yes & Yes & Yes & Yes \\ 
+Observations & 16,321 & 25,184 & 16,321 & 25,184 & 10,885 & 17,321 \\ 
+R$^{2}$ & 0.848 & 0.858 & 0.848 & 0.857 & 0.876 & 0.877 \\ 
+\hline 
+\hline \\[-1.8ex] 
+\end{tabular}
+\end{adjustbox}
+\begin{tablenotes} 
+ \small 
+ \item \\ 
+All loan is the share of total loan normalised by the GDP. Long-term loan is the share of long term loan normalised by the GDP. Financial development is defined as the share of non-4-SOCBs' share in credit. The list of TCZ cities is provided by the State Council, 1998 \sym{*} Significance at the 10\%, \sym{**} Significance at the 5\%, \sym{***} Significance at the 1\%.Heteroskedasticity-robust standard errorsclustered at the city-industry level appear in parentheses. 
+\end{tablenotes}
+\end{table}
+
+\end{document}
