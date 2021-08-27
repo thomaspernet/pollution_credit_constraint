@@ -86,8 +86,8 @@ parent_path = str(Path(path).parent.parent.parent)
 
 
 name_credential = 'financial_dep_SO2_accessKeys.csv'
-region = 'eu-west-3'
-bucket = 'datalake-datascience'
+region = 'eu-west-2'
+bucket = 'datalake-london'
 path_cred = "{0}/creds/{1}".format(parent_path, name_credential)
 ```
 
@@ -159,7 +159,7 @@ for key, value in enumerate(schema):
 ```
 
 ```sos kernel="SoS"
-download_data = False
+download_data = True
 filename = 'df_{}'.format(table)
 full_path_filename = 'SQL_OUTPUT_ATHENA/CSV/{}.csv'.format(filename)
 path_local = os.path.join(str(Path(path).parent.parent.parent), 
@@ -715,17 +715,18 @@ Notebook reference: https://github.com/thomaspernet/Financial_dependency_polluti
 
 ```sos kernel="SoS"
 folder = 'Tables_0'
-table_nb = 1
+table_nb = 2
 table = 'table_{}'.format(table_nb)
 path = os.path.join(folder, table + '.txt')
 if os.path.exists(folder) == False:
         os.mkdir(folder)
-for ext in ['.txt', '.tex', '.pdf']:
-    x = [a for a in os.listdir(folder) if a.endswith(ext)]
-    [os.remove(os.path.join(folder, i)) for i in x]
+#for ext in ['.txt', '.tex', '.pdf']:
+#    x = [a for a in os.listdir(folder) if a.endswith(ext)]
+#    [os.remove(os.path.join(folder, i)) for i in x]
 ```
 
 ```sos kernel="R"
+%get path table
 ### CITY DOMINATED
 t_0 <- felm(log(tso2) ~  
             log(output) + log(employment) + log(capital) + 
@@ -826,17 +827,18 @@ lb.beautify(table_number = table_nb,
 
 ```sos kernel="SoS"
 folder = 'Tables_0'
-table_nb = 1
+table_nb = 3
 table = 'table_{}'.format(table_nb)
 path = os.path.join(folder, table + '.txt')
 if os.path.exists(folder) == False:
         os.mkdir(folder)
-for ext in ['.txt', '.tex', '.pdf']:
-    x = [a for a in os.listdir(folder) if a.endswith(ext)]
-    [os.remove(os.path.join(folder, i)) for i in x]
+#for ext in ['.txt', '.tex', '.pdf']:
+#    x = [a for a in os.listdir(folder) if a.endswith(ext)]
+#    [os.remove(os.path.join(folder, i)) for i in x]
 ```
 
 ```sos kernel="R"
+%get path table
 ### CITY DOMINATED
 t_0 <- felm(log(tso2) ~  
             log(output) + log(employment) + log(capital) + 
@@ -927,17 +929,18 @@ lb.beautify(table_number = table_nb,
 
 ```sos kernel="SoS"
 folder = 'Tables_0'
-table_nb = 1
+table_nb = 4
 table = 'table_{}'.format(table_nb)
 path = os.path.join(folder, table + '.txt')
 if os.path.exists(folder) == False:
         os.mkdir(folder)
-for ext in ['.txt', '.tex', '.pdf']:
-    x = [a for a in os.listdir(folder) if a.endswith(ext)]
-    [os.remove(os.path.join(folder, i)) for i in x]
+#for ext in ['.txt', '.tex', '.pdf']:
+#    x = [a for a in os.listdir(folder) if a.endswith(ext)]
+#    [os.remove(os.path.join(folder, i)) for i in x]
 ```
 
 ```sos kernel="R"
+%get path table
 t_0 <- felm(log(tso2) ~  
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply) * credit_constraint
@@ -1039,14 +1042,14 @@ Message
 
 ```sos kernel="SoS"
 folder = 'Tables_0'
-table_nb = 1
+table_nb = 5
 table = 'table_{}'.format(table_nb)
 path = os.path.join(folder, table + '.txt')
 if os.path.exists(folder) == False:
         os.mkdir(folder)
-for ext in ['.txt', '.tex', '.pdf']:
-    x = [a for a in os.listdir(folder) if a.endswith(ext)]
-    [os.remove(os.path.join(folder, i)) for i in x]
+#for ext in ['.txt', '.tex', '.pdf']:
+#    x = [a for a in os.listdir(folder) if a.endswith(ext)]
+#    [os.remove(os.path.join(folder, i)) for i in x]
 ```
 
 <!-- #region kernel="SoS" -->
@@ -1158,17 +1161,18 @@ lb.beautify(table_number = table_nb,
 
 ```sos kernel="SoS"
 folder = 'Tables_0'
-table_nb = 1
+table_nb = 6
 table = 'table_{}'.format(table_nb)
 path = os.path.join(folder, table + '.txt')
 if os.path.exists(folder) == False:
         os.mkdir(folder)
-for ext in ['.txt', '.tex', '.pdf']:
-    x = [a for a in os.listdir(folder) if a.endswith(ext)]
-    [os.remove(os.path.join(folder, i)) for i in x]
+#for ext in ['.txt', '.tex', '.pdf']:
+#    x = [a for a in os.listdir(folder) if a.endswith(ext)]
+#    [os.remove(os.path.join(folder, i)) for i in x]
 ```
 
 ```sos kernel="R"
+%get path table
 t_0 <- felm(log(tso2) ~  
            credit_constraint * target_reduction_so2_p * year
            |  fe_p_i + fe_t_i + fe_p_t|0 | province_en +ind2, df_agg%>% 

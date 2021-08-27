@@ -1,0 +1,53 @@
+
+\documentclass[preview]{standalone} 
+\usepackage[utf8]{inputenc}
+\usepackage{booktabs,caption,threeparttable, siunitx, adjustbox}
+
+\begin{document}% Date and time \times  Fri, Aug 27, 2021 - 05 \times 22 \times 59
+\begin{table}[!htbp] \centering 
+  \caption{SO2 emission reduction, credit constraint and policy mandate} 
+\label{}
+\begin{adjustbox}{width=\textwidth, totalheight=\textheight-2\baselineskip,keepaspectratio}
+\begin{tabular}{@{\extracolsep{5pt}}lccc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+ & \multicolumn{3}{c}{Dependent variable: SO2 emission} \\ 
+\cline{2-4} 
+\\[-1.8ex] & (1) & (2) & (3)\\ 
+\hline \\[-1.8ex] 
+  \text{credit constraint} \times \text{S02 mandate}_p \times \text{\text{period}} & $-$0.112$^{**}$ & $-$0.161$^{***}$ & $-$0.230$^{***}$ \\ 
+  & (0.054) & (0.035) & (0.071) \\ 
+  log(\text{All loan}_{pt}) \times \text{credit constraint} &  & $-$0.342$^{***}$ &  \\ 
+  &  & (0.121) &  \\ 
+  log(\text{Long-term loan}_{pt}) \times \text{credit constraint} &  &  & $-$0.062 \\ 
+  &  &  & (0.129) \\ 
+  log(\text{All loan}_{pt}) \times \text{credit constraint} \times \text{S02 mandate}_p &  & $-$0.088 &  \\ 
+  &  & (0.115) &  \\ 
+  log(\text{Long-term loan}_{pt}) \times \text{credit constraint} \times \text{S02 mandate}_p &  &  & $-$0.109$^{*}$ \\ 
+  &  &  & (0.060) \\ 
+  log(\text{All loan}_{pt}) \times \text{credit constraint} \times \text{\text{period}} &  & 0.259 &  \\ 
+  &  & (0.226) &  \\ 
+  log(\text{Long-term loan}_{pt}) \times \text{credit constraint} \times \text{\text{period}} &  &  & 0.077 \\ 
+  &  &  & (0.173) \\ 
+  log(\text{All loan}_{pt}) \times \text{credit constraint} \times \text{S02 mandate}_p \times \text{\text{period}} &  & $-$0.214$^{*}$ &  \\ 
+  &  & (0.122) &  \\ 
+  log(\text{Long-term loan}_{pt}) \times \text{credit constraint} \times \text{S02 mandate}_p \times \text{\text{period}} &  &  & $-$0.142$^{*}$ \\ 
+  &  &  & (0.080) \\ 
+ \hline \\[-1.8ex] 
+Province-industry & Yes & Yes & Yes \\ 
+Time-industry & Yes & Yes & Yes \\ 
+Province-Time & Yes & Yes & Yes \\ 
+Observations & 6,786 & 6,786 & 6,786 \\ 
+R$^{2}$ & 0.892 & 0.892 & 0.892 \\ 
+\hline 
+\hline \\[-1.8ex] 
+\end{tabular}
+\end{adjustbox}
+\begin{tablenotes} 
+ \small 
+ \item \\ 
+This table estimates eq(2).  SO2 city mandate measures the total amount of SO2 a city needs to reduce by the end of the 11th FYP. All loan is the share of total loan normalised by the GDP. Long-term loan is the share of long term loan normalised by the GDP. Financial development is defined as the share of non-4-SOCBs' share in credit. Heteroskedasticity-robust standard errorsclustered at the product level appear inparentheses.\sym{*} Significance at the 10\%, \sym{**} Significance at the 5\%, \sym{***} Significance at the 1\%. 
+\end{tablenotes}
+\end{table}
+
+\end{document}

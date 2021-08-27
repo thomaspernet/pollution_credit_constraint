@@ -1,0 +1,52 @@
+
+\documentclass[preview]{standalone} 
+\usepackage[utf8]{inputenc}
+\usepackage{booktabs,caption,threeparttable, siunitx, adjustbox}
+
+\begin{document}% Date and time \times  Fri, Aug 27, 2021 - 05 \times 23 \times 00
+\begin{table}[!htbp] \centering 
+  \caption{parallel trend} 
+\label{}
+\begin{adjustbox}{width=\textwidth, totalheight=\textheight-2\baselineskip,keepaspectratio}
+\begin{tabular}{@{\extracolsep{5pt}}lc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+ & \multicolumn{1}{c}{Dependent variable: SO2 emission} \\ 
+\cline{2-2} 
+\hline \\[-1.8ex] 
+  \text{credit constraint} \times \text{S02 mandate}_p \times \text{2001} & 0.042 \\ 
+  & (0.068) \\ 
+  \text{credit constraint} \times \text{S02 mandate}_p \times \text{1998} & 0.092 \\ 
+  & (0.073) \\ 
+  \text{credit constraint} \times \text{S02 mandate}_p \times \text{1999} & 0.117 \\ 
+  & (0.104) \\ 
+  \text{credit constraint} \times \text{S02 mandate}_p \times \text{2000} & 0.080 \\ 
+  & (0.073) \\ 
+  \text{credit constraint} \times \text{S02 mandate}_p \times \text{2002} & $-$0.049 \\ 
+  & (0.062) \\ 
+  \text{credit constraint} \times \text{S02 mandate}_p \times \text{2003} & 0.017 \\ 
+  & (0.079) \\ 
+  \text{credit constraint} \times \text{S02 mandate}_p \times \text{2004} & $-$0.028 \\ 
+  & (0.078) \\ 
+  \text{credit constraint} \times \text{S02 mandate}_p \times \text{2006} & $-$0.122$^{*}$ \\ 
+  & (0.062) \\ 
+  \text{credit constraint} \times \text{S02 mandate}_p \times \text{2007} & $-$0.042 \\ 
+  & (0.035) \\ 
+ \hline \\[-1.8ex] 
+Province-industry & Yes \\ 
+Province-industry & Yes \\ 
+Province-Time & Yes \\ 
+Observations & 6,786 \\ 
+R$^{2}$ & 0.892 \\ 
+\hline 
+\hline \\[-1.8ex] 
+\end{tabular}
+\end{adjustbox}
+\begin{tablenotes} 
+ \small 
+ \item \\ 
+The year 2005 is the omitted category.  SO2 city mandate measures the total amount of SO2 a city needs to reduce by the end of the 11th FYP. All loan is the share of total loan normalised by the GDP. Long-term loan is the share of long term loan normalised by the GDP. Financial development is defined as the share of non-4-SOCBs' share in credit. Heteroskedasticity-robust standard errorsclustered at the product level appear inparentheses.\sym{*} Significance at the 10\%, \sym{**} Significance at the 5\%, \sym{***} Significance at the 1\%. 
+\end{tablenotes}
+\end{table}
+
+\end{document}
