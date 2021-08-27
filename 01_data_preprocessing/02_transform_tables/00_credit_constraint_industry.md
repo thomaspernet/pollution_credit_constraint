@@ -131,8 +131,8 @@ parent_path = str(Path(path).parent.parent)
 
 
 name_credential = 'financial_dep_SO2_accessKeys.csv'
-region = 'eu-west-3'
-bucket = 'datalake-datascience'
+region = 'eu-west-2'
+bucket = 'datalake-london'
 path_cred = "{0}/creds/{1}".format(parent_path, name_credential)
 ```
 
@@ -528,11 +528,11 @@ FROM
   LEFT JOIN firms_survey.asif_city_characteristics_ownership
     ON aggregate_pol.geocode4_corr = asif_city_characteristics_ownership.geocode4_corr
   LEFT JOIN chinese_lookup.province_credit_constraint ON aggregate_pol.province_en = province_credit_constraint.Province
-  LEFT JOIN (
-    SELECT geocode4_corr, avg_ij_o_city_mandate, d_avg_ij_o_city_mandate 
-FROM "policy"."china_spatial_relocation"
-    ) as relocation
-    ON aggregate_pol.geocode4_corr = relocation.geocode4_corr
+--  LEFT JOIN (
+--    SELECT geocode4_corr, avg_ij_o_city_mandate, d_avg_ij_o_city_mandate 
+--FROM "policy"."china_spatial_relocation"
+--    ) as relocation
+--    ON aggregate_pol.geocode4_corr = relocation.geocode4_corr
 LEFT JOIN (
     SELECT 
   year, 
@@ -1045,10 +1045,10 @@ FROM
   FROM chinese_lookup.province_credit_constraint) as province_credit_constraint
   ON aggregate_pol.province_en = province_credit_constraint.Province
   LEFT JOIN (
-    SELECT geocode4_corr, avg_ij_o_city_mandate, d_avg_ij_o_city_mandate 
-FROM "policy"."china_spatial_relocation"
-    ) as relocation
-    ON aggregate_pol.geocode4_corr = relocation.geocode4_corr
+--    SELECT geocode4_corr, avg_ij_o_city_mandate, d_avg_ij_o_city_mandate 
+--FROM "policy"."china_spatial_relocation"
+--    ) as relocation
+--    ON aggregate_pol.geocode4_corr = relocation.geocode4_corr
 LEFT JOIN (
     SELECT 
   year, 

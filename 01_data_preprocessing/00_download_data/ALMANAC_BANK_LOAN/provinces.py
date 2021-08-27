@@ -14,8 +14,8 @@ from tqdm import tqdm
 path = os.getcwd()
 parent_path = str(Path(path).parent.parent.parent)
 name_credential = 'financial_dep_SO2_accessKeys.csv'
-region = 'eu-west-3'
-bucket = 'datalake-datascience'
+region = 'eu-west-2'
+bucket = 'datalake-london'
 path_cred = "{0}/creds/{1}".format(parent_path, name_credential)
 
 # AWS
@@ -115,7 +115,7 @@ description = 'Download province loan and deposit data'
 
 glue = service_glue.connect_glue(client=client)
 
-target_S3URI = os.path.join("s3://datalake-datascience", PATH_S3)
+target_S3URI = os.path.join("s3://datalake-london", PATH_S3)
 name_crawler = "crawl-industry-name"
 Role = 'arn:aws:iam::468786073381:role/AWSGlueServiceRole-crawler-datalake'
 DatabaseName = "almanac_bank_china"
