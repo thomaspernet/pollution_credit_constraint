@@ -266,8 +266,8 @@ SELECT
   target_reduction_co2_p,
   above_threshold_mandate,
   above_average_mandate,
-  --avg_ij_o_city_mandate,
-  --CASE WHEN d_avg_ij_o_city_mandate IS NULL THEN 'FALSE' ELSE d_avg_ij_o_city_mandate END AS d_avg_ij_o_city_mandate,
+  avg_ij_o_city_mandate,
+  CASE WHEN d_avg_ij_o_city_mandate IS NULL THEN 'FALSE' ELSE d_avg_ij_o_city_mandate END AS d_avg_ij_o_city_mandate,
   in_10_000_tonnes, 
   credit_constraint,
   financial_dep_us,
@@ -528,11 +528,11 @@ FROM
   LEFT JOIN firms_survey.asif_city_characteristics_ownership
     ON aggregate_pol.geocode4_corr = asif_city_characteristics_ownership.geocode4_corr
   LEFT JOIN chinese_lookup.province_credit_constraint ON aggregate_pol.province_en = province_credit_constraint.Province
---  LEFT JOIN (
---    SELECT geocode4_corr, avg_ij_o_city_mandate, d_avg_ij_o_city_mandate 
---FROM "policy"."china_spatial_relocation"
---    ) as relocation
---    ON aggregate_pol.geocode4_corr = relocation.geocode4_corr
+  LEFT JOIN (
+    SELECT geocode4_corr, avg_ij_o_city_mandate, d_avg_ij_o_city_mandate 
+FROM "policy"."china_spatial_relocation"
+    ) as relocation
+    ON aggregate_pol.geocode4_corr = relocation.geocode4_corr
 LEFT JOIN (
     SELECT 
   year, 
@@ -778,8 +778,8 @@ SELECT
   target_reduction_co2_p,
   above_threshold_mandate,
   above_average_mandate,
-  --avg_ij_o_city_mandate,
-  --CASE WHEN d_avg_ij_o_city_mandate IS NULL THEN 'FALSE' ELSE d_avg_ij_o_city_mandate END AS d_avg_ij_o_city_mandate,
+  avg_ij_o_city_mandate,
+  CASE WHEN d_avg_ij_o_city_mandate IS NULL THEN 'FALSE' ELSE d_avg_ij_o_city_mandate END AS d_avg_ij_o_city_mandate,
   in_10_000_tonnes, 
   credit_constraint,
   financial_dep_us,
@@ -1044,11 +1044,11 @@ FROM
   supply_all_credit, supply_long_term_credit
   FROM chinese_lookup.province_credit_constraint) as province_credit_constraint
   ON aggregate_pol.province_en = province_credit_constraint.Province
---  LEFT JOIN (
---    SELECT geocode4_corr, avg_ij_o_city_mandate, d_avg_ij_o_city_mandate 
---FROM "policy"."china_spatial_relocation"
---    ) as relocation
---    ON aggregate_pol.geocode4_corr = relocation.geocode4_corr
+  LEFT JOIN (
+    SELECT geocode4_corr, avg_ij_o_city_mandate, d_avg_ij_o_city_mandate 
+FROM "policy"."china_spatial_relocation"
+    ) as relocation
+    ON aggregate_pol.geocode4_corr = relocation.geocode4_corr
 LEFT JOIN (
     SELECT 
   year, 
