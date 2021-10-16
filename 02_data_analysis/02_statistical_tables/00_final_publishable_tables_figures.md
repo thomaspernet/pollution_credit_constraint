@@ -10,9 +10,9 @@ jupyter:
   kernel_info:
     name: python3
   kernelspec:
-    display_name: SoS
-    language: sos
-    name: sos
+    display_name: Python 3
+    language: python
+    name: python3
 ---
 
 <!-- #region kernel="SoS" -->
@@ -68,7 +68,7 @@ tso2
 # Connexion server
 <!-- #endregion -->
 
-```sos kernel="python3"
+```python kernel="python3"
 from awsPy.aws_authorization import aws_connector
 from awsPy.aws_s3 import service_s3
 from awsPy.aws_glue import service_glue
@@ -89,7 +89,7 @@ bucket = 'datalake-london'
 path_cred = "{0}/creds/{1}".format(parent_path, name_credential)
 ```
 
-```sos kernel="python3"
+```python kernel="python3"
 con = aws_connector.aws_instantiate(credential = path_cred,
                                        region = region)
 client= con.client_boto()
@@ -98,7 +98,7 @@ s3 = service_s3.connect_S3(client = client,
 glue = service_glue.connect_glue(client = client) 
 ```
 
-```sos kernel="python3"
+```python kernel="python3"
 pandas_setting = True
 if pandas_setting:
     #cm = sns.light_palette("green", as_cmap=True)
@@ -106,7 +106,7 @@ if pandas_setting:
     pd.set_option('display.max_colwidth', None)
 ```
 
-```sos kernel="python3" nteract={"transient": {"deleting": false}}
+```python kernel="python3" nteract={"transient": {"deleting": false}}
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 ```
@@ -117,12 +117,12 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 Since we load the data as a Pandas DataFrame, we want to pass the `dtypes`. We load the schema from Glue to guess the types
 <!-- #endregion -->
 
-```sos kernel="python3"
+```python kernel="python3"
 db = 'environment'
 table = 'fin_dep_pollution_baseline_industry'
 ```
 
-```sos kernel="python3"
+```python kernel="python3"
 dtypes = {}
 schema = (glue.get_table_information(database = db,
                            table = table)
@@ -142,12 +142,12 @@ for key, value in enumerate(schema):
     )
 ```
 
-```sos kernel="python3"
+```python kernel="python3"
 s3 = service_s3.connect_S3(client = client,
                           bucket = bucket, verbose = False)
 ```
 
-```sos kernel="python3" nteract={"transient": {"deleting": false}}
+```python kernel="python3" nteract={"transient": {"deleting": false}}
 pd.DataFrame(schema)
 ```
 
@@ -175,7 +175,7 @@ if you need to pass a latex format with `\`, you need to duplicate it for instan
 Then add it to the key `to_rename`
 <!-- #endregion -->
 
-```sos kernel="python3" nteract={"transient": {"deleting": false}}
+```python kernel="python3" nteract={"transient": {"deleting": false}}
 add_to_dic = True
 if add_to_dic:
     if os.path.exists("schema_table.json"):
@@ -377,7 +377,7 @@ if add_to_dic:
         json.dump(data, outfile)
 ```
 
-```sos kernel="python3"
+```python kernel="python3"
 sys.path.append(os.path.join(parent_path, 'utils'))
 import latex.latex_beautify as lb
 #%load_ext autoreload
@@ -392,11 +392,11 @@ import latex.latex_beautify as lb
 1. From this link: [so2-emissions_china](https://docs.google.com/spreadsheets/d/1AR5Km3LCOMJVYm14cbjqbcscjZ3fkBLvYU6bu_bf-4I/edit?usp=sharing) → source https://ourworldindata.org/air-pollution-does-it-get-worse-before-it-gets-better
 <!-- #endregion -->
 
-```sos kernel="python3"
+```python kernel="python3"
 #!pip install --upgrade git+git://github.com/thomaspernet/GoogleDrive-python
 ```
 
-```sos kernel="python3"
+```python kernel="python3"
 from GoogleDrivePy.google_drive import connect_drive
 from GoogleDrivePy.google_authorization import authorization_service
 import seaborn as sns;
@@ -405,18 +405,18 @@ sns.set()
 sns.set_style("white")
 ```
 
-```sos kernel="python3"
+```python kernel="python3"
 for d in ['token.pickle', 'service.json']:
     s3.download_file(key = "CREDS/pollution_credit_constraint/creds/{}".format(d),
                  path_local = os.path.join(parent_path, "creds"))
 ```
 
-```sos kernel="python3"
+```python kernel="python3"
 os.path.join(
     parent_path, "creds", "service.json")
 ```
 
-```sos kernel="python3"
+```python kernel="python3"
 auth = authorization_service.get_authorization(
     #path_credential_gcp=os.path.join(parent_path, "creds", "service.json"),
     path_credential_drive=os.path.join(parent_path, "creds"),
@@ -429,7 +429,7 @@ gd_auth = auth.authorization_drive(path_secret=os.path.join(
 drive = connect_drive.drive_operations(gd_auth)
 ```
 
-```sos kernel="python3"
+```python kernel="python3"
 FILENAME_SPREADSHEET = "so2-emissions_china"
 spreadsheet_id = drive.find_file_id(FILENAME_SPREADSHEET, to_print=False)
 sheetName = 'so2-emissions_china.csv'
@@ -444,7 +444,7 @@ var = (
 )
 ```
 
-```sos kernel="python3"
+```python kernel="python3"
 fig, ax = plt.subplots(figsize=(10, 8))
 ax.plot(var['Year'], var['so2'])
 ax.axvline(x='2006', c='red')
@@ -470,7 +470,7 @@ plt.savefig("Figures/fig_1.png",
 ![](https://codahosted.io/docs/vZByVL8huL/blobs/bl-00qo5tfgdE/fd2d69dbea92066913d55517e60d1e87dc5fe752ef79831b4415ca43b2ec8897668f47f6922cc67a056452bbda81e3f6a642240595304282cebe9bf57246c6066ce6fffbcbe0b11332d6eb60daf435522f528a51b3835d8136c125aa570434efeb6e8bc2)
 <!-- #endregion -->
 
-```sos kernel="python3"
+```python kernel="python3"
 query = """
 SELECT year, avg(fin_dep) as fin_dep
 FROM(
@@ -493,7 +493,7 @@ df = s3.run_query(
 df.head()
 ```
 
-```sos kernel="python3"
+```python kernel="python3"
 fig, ax = plt.subplots(figsize=(10, 8))
 ax.plot(df['year'], df['fin_dep'])
 plt.xlabel('Year')
@@ -514,7 +514,7 @@ plt.savefig("Figures/fig_2.png",
 ![](https://codahosted.io/docs/vZByVL8huL/blobs/bl-vny1krGci-/2df6ba87e3e9d9f3defdb5c0fa2a9aaa0f7e770e29284f176a1f8a7e1d538d3122b8e89587df3e1c1305862e9871705af430018d4818b5b538a519440acc8840a30bd5497032d1a18c736ffe811d61012796f0e799c8a440bee33fac087709fe434afecf)
 <!-- #endregion -->
 
-```sos kernel="python3"
+```python kernel="python3"
 query = """
 SELECT 
   map_keys(pct_change) [1] as key, 
@@ -571,7 +571,7 @@ df = s3.run_query(
 df.head()
 ```
 
-```sos kernel="python3"
+```python kernel="python3"
 plt.figure(figsize=(10, 8))
 ax = sns.lmplot(x='target',
            y="pct_change",
@@ -590,7 +590,7 @@ plt.savefig("Figures/fig_3.png",
 # Figure 4: parallel trend
 <!-- #endregion -->
 
-```sos kernel="R"
+```python kernel="R"
 options(warn=-1)
 library(tidyverse)
 library(lfe)
@@ -599,7 +599,7 @@ library('progress')
 #path = "../../../utils/latex/table_golatex.R"
 ```
 
-```sos kernel="SoS"
+```python kernel="SoS"
 import os
 from pathlib import Path
 filename = 'df_{}'.format("fin_dep_pollution_baseline_industry")
@@ -609,7 +609,7 @@ path_local = os.path.join(str(Path(path).parent.parent),
 df_path = os.path.join(path_local, filename + '.csv')
 ```
 
-```sos kernel="R"
+```python kernel="R"
 %get df_path
 df_final <- read_csv(df_path) %>%
 mutate_if(is.character, as.factor) %>%
@@ -653,7 +653,7 @@ mutate(
 head(df_final)
 ```
 
-```sos kernel="R"
+```python kernel="R"
 t_0 <- felm(log(tso2) ~  
            credit_constraint * target_reduction_so2_p * year
            |  fe_p_i + fe_t_i + fe_p_t|0 | province_en +ind2, df_final%>% 
@@ -661,15 +661,15 @@ t_0 <- felm(log(tso2) ~
             exactDOF = TRUE)
 ```
 
-```sos kernel="R"
+```python kernel="R"
 na.omit(summary(t_0)$coef)
 ```
 
-```sos kernel="R"
+```python kernel="R"
 write.csv(na.omit(summary(t_0)$coef),"standard_errors.csv")
 ```
 
-```sos kernel="python3"
+```python kernel="python3"
 df_sd = (
     pd.read_csv("standard_errors.csv")
     .rename(columns={"Unnamed: 0": "var"})
@@ -703,7 +703,7 @@ df_sd = (
 df_sd
 ```
 
-```sos kernel="python3"
+```python kernel="python3"
 sns.set(color_codes=True)
 sns.set_style("white")
 ```
@@ -712,7 +712,7 @@ sns.set_style("white")
 Only the years with confidence intervervales different from 0 are significant
 <!-- #endregion -->
 
-```sos kernel="python3"
+```python kernel="python3"
 fig, ax = plt.subplots(figsize=(10, 8))
 for lower,upper,y in zip(df_sd['st_error_lower'],df_sd['st_error_upper'],df_sd['year']):
     plt.plot((y,y),(lower,upper),'ro-')
@@ -735,13 +735,13 @@ plt.savefig("Figures/fig_4.png",
 # Summary statistics
 <!-- #endregion -->
 
-```sos kernel="python3"
+```python kernel="python3"
 for i in dtypes:
     if dtypes[i] == 'varchar(5)' or dtypes[i] == 'map<double,boolean>':
         dtypes[i] = 'string'
 ```
 
-```sos kernel="python3"
+```python kernel="python3"
 path_local = os.path.join(str(Path(path).parent.parent), 
                               "00_data_catalog/temporary_local_data")
 filename = 'df_{}'.format(table)
@@ -753,7 +753,7 @@ df_path = (
     )
 ```
 
-```sos kernel="python3"
+```python kernel="python3"
 list_to_sum = [
     "tso2",
     "lag_credit_supply",
@@ -767,7 +767,7 @@ list_to_sum = [
 ]
 ```
 
-```sos kernel="python3"
+```python kernel="python3"
 df_latex = (
     df_path.reindex(columns = list_to_sum)
     .loc[lambda x: x['tso2'] > 500]
@@ -800,13 +800,13 @@ df_latex = (
 )
 ```
 
-```sos kernel="python3"
+```python kernel="python3"
 import tex2pix
 from PyPDF2 import PdfFileMerger
 from wand.image import Image as WImage
 ```
 
-```sos kernel="python3"
+```python kernel="python3"
 folder = 'Tables'
 table_number = 1
 title = 'Summary statistics'
@@ -855,11 +855,79 @@ resolution = 200)
 display(img)
 ```
 
+# Figure and table part: A measure of financial development
+
+## Figure credit supply by location
+
+- Use this table `province_loan_and_credit` and `geo_chinese_province_location` to get the location
+
+```python
+import janitor
+```
+
+```python
+query = """
+SELECT * 
+FROM "almanac_bank_china"."province_loan_and_credit"
+LEFT JOIN (
+SELECT province_en, larger_location
+FROM "chinese_lookup"."geo_chinese_province_location"
+) as prov on province_loan_and_credit.province_en = prov.province_en
+"""
+df = (
+    s3.run_query(
+            query=query,
+            database=db,
+            s3_output='SQL_OUTPUT_ATHENA',
+            filename='fig_2',  # Add filename to print dataframe
+            destination_key='SQL_OUTPUT_ATHENA/CSV',  #Use it temporarily
+            dtype = {'year':'string', 'fin_dep':'float'}
+)
+    .assign(
+        supply_long_term = lambda x: x['total_long_term_loan']/x['total_gdp'],
+    )
+    .groupby(['year','larger_location'])
+    .agg({'supply_long_term':'mean'})
+    .unstack(-1)
+    .collapse_levels(sep='_')
+    .rename(columns = {
+        'supply_long_term_Central':'Central',
+        'supply_long_term_Eastern':'Eastern',
+        'supply_long_term_Western':'Western'
+    })
+)
+
+        
+df.head()
+```
+
+```python
+import matplotlib
+```
+
+```python
+fig, ax = plt.subplots(figsize=(10, 8))
+ax.plot(df.index, df['Central'], label="Central")
+ax.plot(df.index, df['Eastern'],label="Eastern")
+ax.plot(df.index, df['Western'],label="Western")
+plt.xlabel('Year')
+plt.ylabel("Share of long term credit supply over GDP")
+ax.spines['right'].set_visible(False)
+ax.spines['top'].set_visible(False)
+ax.legend(bbox_to_anchor=(1.08, 1), loc=2, borderaxespad=0.)
+plt.xticks(df.index,rotation=30)
+#plt.title('Evolution of share of non-state bank in total loan')
+#plt.show()
+plt.savefig("Figures/fig_5.png",
+            bbox_inches='tight',
+            dpi=600)
+```
+
 <!-- #region kernel="SoS" nteract={"transient": {"deleting": false}} -->
 # Generate reports
 <!-- #endregion -->
 
-```sos kernel="python3" nteract={"transient": {"deleting": false}} outputExpanded=false
+```python kernel="python3" nteract={"transient": {"deleting": false}} outputExpanded=false
 import os, time, shutil, urllib, ipykernel, json
 from pathlib import Path
 from notebook import notebookapp
@@ -871,12 +939,12 @@ import make_toc
 import create_report
 ```
 
-```sos kernel="python3"
+```python kernel="python3"
 name_json = 'parameters_ETL_pollution_credit_constraint.json'
 path_json = os.path.join(str(Path(path).parent.parent), 'utils',name_json)
 ```
 
-```sos kernel="python3" nteract={"transient": {"deleting": false}} outputExpanded=false
+```python kernel="python3" nteract={"transient": {"deleting": false}} outputExpanded=false
 create_report.create_report(extension = "html", keep_code = False,
                             notebookname = "00_final_publishable_tables_figures.ipynb")
 ```
