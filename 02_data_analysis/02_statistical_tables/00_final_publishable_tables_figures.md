@@ -870,7 +870,7 @@ query = """
 SELECT * 
 FROM "almanac_bank_china"."province_loan_and_credit"
 LEFT JOIN (
-SELECT province_en, larger_location
+SELECT province_en, larger_location, coastal
 FROM "chinese_lookup"."geo_chinese_province_location"
 ) as prov on province_loan_and_credit.province_en = prov.province_en
 """
@@ -883,22 +883,43 @@ df = (
             destination_key='SQL_OUTPUT_ATHENA/CSV',  #Use it temporarily
             dtype = {'year':'string', 'fin_dep':'float'}
 )
+    .groupby(['year','coastal'])
+    .agg(
+        {
+            'total_bank_loan':'sum',
+            'total_gdp':'sum',
+            
+        })
     .assign(
-        supply_long_term = lambda x: x['total_long_term_loan']/x['total_gdp'],
+        supply_long_term = lambda x: x['total_bank_loan']/x['total_gdp'],
     )
-    .groupby(['year','larger_location'])
-    .agg({'supply_long_term':'mean'})
+    #.groupby(['year','larger_location'])
+    #.agg({'supply_long_term':'sum'})
+    .drop(columns = ['total_bank_loan','total_gdp'])
     .unstack(-1)
     .collapse_levels(sep='_')
-    .rename(columns = {
-        'supply_long_term_Central':'Central',
-        'supply_long_term_Eastern':'Eastern',
-        'supply_long_term_Western':'Western'
-    })
+    #.rename(columns = {
+    #    'supply_long_term_Central':'Central',
+    #    'supply_long_term_Eastern':'Eastern',
+    #    'supply_long_term_Western':'Western'
+    #})
+    .rename(columns = {'supply_long_term_No':'No', 'supply_long_term_Yes':'Yes'})
+    .assign( 
+        #pct_change_c = lambda x: x['Central'].pct_change(),
+        #pct_change_e = lambda x: x['Eastern'].pct_change(),
+        #pct_change_w = lambda x: x['Western'].pct_change()
+        pct_change_y = lambda x: x['Yes'].pct_change(),
+        pct_change_n = lambda x: x['No'].pct_change()
+           )
+    #
 )
 
         
-df.head()
+df
+```
+
+```python
+df.mean()
 ```
 
 ```python
@@ -907,9 +928,11 @@ import matplotlib
 
 ```python
 fig, ax = plt.subplots(figsize=(10, 8))
-ax.plot(df.index, df['Central'], label="Central")
-ax.plot(df.index, df['Eastern'],label="Eastern")
-ax.plot(df.index, df['Western'],label="Western")
+#ax.plot(df.index, df['Central'], label="Central")
+#ax.plot(df.index, df['Eastern'],label="Eastern")
+#ax.plot(df.index, df['Western'],label="Western")
+#ax.plot(df.index, df['No'],label="No")
+#ax.plot(df.index, df['Yes'],label="Yes")
 plt.xlabel('Year')
 plt.ylabel("Share of long term credit supply over GDP")
 ax.spines['right'].set_visible(False)
