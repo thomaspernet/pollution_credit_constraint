@@ -1,0 +1,48 @@
+
+\documentclass[preview]{standalone} 
+\usepackage[utf8]{inputenc}
+\usepackage{booktabs,caption,threeparttable, siunitx, adjustbox}
+
+\begin{document}% Date and time \times  Sat, Oct 16, 2021 - 07 \times 17 \times 43
+\begin{table}[!htbp] \centering 
+  \caption{Pollution emission, credit supply and financial development, City dominated public/private} 
+\label{}
+\begin{adjustbox}{width=\textwidth, totalheight=\textheight-2\baselineskip,keepaspectratio}
+\begin{tabular}{@{\extracolsep{5pt}}lcccccc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+ & \multicolumn{6}{c}{Dependent variable: Pollution emission} \\ 
+\cline{2-7} 
+\\[-1.8ex] & (1) & (2) & (3) & (4) & (5) & (6)\\
+ \\[-1.8ex]& Above & Below & Above & Below & Above & Below\\
+ \hline \\[-1.8ex] 
+ log(output) & 0.039 & 0.033 & 0.039 & 0.032 & 0.121$^{*}$ & 0.050 \\ 
+  & (0.047) & (0.028) & (0.047) & (0.028) & (0.061) & (0.032) \\ 
+  log(employment) & 0.284$^{***}$ & 0.186$^{***}$ & 0.284$^{***}$ & 0.186$^{***}$ & 0.072 & 0.129$^{***}$ \\ 
+  & (0.073) & (0.028) & (0.073) & (0.028) & (0.083) & (0.036) \\ 
+  log(capital) & $-$0.020 & 0.011 & $-$0.020 & 0.011 & $-$0.034 & $-$0.008 \\ 
+  & (0.033) & (0.015) & (0.033) & (0.015) & (0.045) & (0.021) \\ 
+  log(\text{All loan}_{pt}) \times \text{credit constraint} & 0.062 & $-$0.272$^{***}$ &  &  &  &  \\ 
+  & (0.278) & (0.083) &  &  &  &  \\ 
+  log(\text{Long-term loan}_{pt}) \times \text{credit constraint} &  &  & $-$0.036 & $-$0.141$^{**}$ &  &  \\ 
+  &  &  & (0.173) & (0.062) &  &  \\ 
+  log(\text{financial development}_{pt}) \times \text{credit constraint} &  &  &  &  & $-$0.220 & $-$0.339$^{***}$ \\ 
+  &  &  &  &  & (0.319) & (0.111) \\ 
+ \hline \\[-1.8ex] 
+City-industry & Yes & Yes & Yes & Yes & Yes & Yes \\ 
+Time-industry & Yes & Yes & Yes & Yes & Yes & Yes \\ 
+City-Time & Yes & Yes & Yes & Yes & Yes & Yes \\ 
+Observations & 6,628 & 34,877 & 6,628 & 34,877 & 4,620 & 23,586 \\ 
+R$^{2}$ & 0.902 & 0.855 & 0.902 & 0.855 & 0.914 & 0.878 \\ 
+\hline 
+\hline \\[-1.8ex] 
+\end{tabular}
+\end{adjustbox}
+\begin{tablenotes} 
+ \small 
+ \item \\ 
+All loan is the share of total loan normalised by the GDP. Long-term loan is the share of long term loan normalised by the GDP. Financial development is defined as the share of non-4-SOCBs' share in credit. Cities split are based on the presence of SOEs firms. 'Above' means the total output produced by SOEs firms exceed the output of private firms. \sym{*} Significance at the 10\%, \sym{**} Significance at the 5\%, \sym{***} Significance at the 1\%.Heteroskedasticity-robust standard errors clustered at the city-industry level appear in parentheses. 
+\end{tablenotes}
+\end{table}
+
+\end{document}

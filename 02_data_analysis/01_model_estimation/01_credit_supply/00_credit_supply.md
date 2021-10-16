@@ -690,84 +690,212 @@ City ownership are available for the following variables:
     - A given city will have SOE asset tangibility and PRIVATE asset tangibility [output, employment, capital and sales]
     - If asset tangibility SOE above Private then city is dominated by SOE
 
-Notebook reference: https://github.com/thomaspernet/Financial_dependency_pollution/blob/master/01_data_preprocessing/02_transform_tables/07_dominated_city_ownership.md
+Notebook reference: 
 
-Industrial are available for the following variables:
-
-- output
-- capital
-- employment
-- sales
-
-**Industrial size effect**
-- Change computation large vs small industry
-    - Compute the median (percentile) within a city taking all firms
-    - Compute the median (percentile) within a city-industry taking all firms within the industry
-    - For instance, Shanghai has 3 sectors, compute the median for Shanghai, and 3 median for each sector
-    
-
-Notebook reference: https://github.com/thomaspernet/Financial_dependency_pollution/blob/master/01_data_preprocessing/02_transform_tables/08_dominated_industry_ownership.md
+https://github.com/thomaspernet/Financial_dependency_pollution/blob/master/02_data_analysis/01_model_estimation/00_estimate_fin_ratio/03_so2_fin_ratio_sector.md#table-3-heterogeneity-effect-city-ownership-public-vs-private-domestic-vs-foreign
 <!-- #endregion -->
+
+```sos kernel="SoS"
+query = """
+WITH test AS (
+  SELECT 
+    *,
+    CASE WHEN LENGTH(cic) = 4 THEN substr(cic, 1, 2) ELSE concat(
+      '0', 
+      substr(cic, 1, 1)
+    ) END AS indu_2,
+    CASE WHEN ownership = 'SOE' THEN 'SOE' ELSE 'PRIVATE' END AS soe_vs_pri,
+    CASE WHEN ownership in ('HTM', 'FOREIGN') THEN 'FOREIGN' ELSE 'DOMESTIC' END AS for_vs_dom 
+  FROM 
+    firms_survey.asif_firms_prepared 
+    INNER JOIN (
+      SELECT 
+        extra_code, 
+        geocode4_corr 
+      FROM 
+        chinese_lookup.china_city_code_normalised 
+      GROUP BY 
+        extra_code, 
+        geocode4_corr
+    ) as no_dup_citycode ON asif_firms_prepared.citycode = no_dup_citycode.extra_code
+  
+) 
+SELECT year, soe, geocode4_corr, indu_2,SUM(output) as output, SUM(employ) as employ, SUM(captal) as capital
+FROM (
+SELECT *,
+CASE WHEN ownership in ('SOE') THEN 'SOE' ELSE 'PRIVATE' END AS soe
+FROM test 
+  )
+  GROUP BY soe, geocode4_corr, year, indu_2
+"""
+df = (s3.run_query(
+        query=query,
+        database=db,
+        s3_output='SQL_OUTPUT_ATHENA',
+        filename="test",  # Add filename to print dataframe
+        destination_key='SQL_OUTPUT_ATHENA/CSV',  #Use it temporarily
+        dtype = dtypes
+    )
+     )
+```
+
+```sos kernel="SoS"
+import janitor
+```
+
+```sos kernel="SoS"
+for v in ['output','employ', 'capital']:
+    for t in [.5, .4, .3, .2, .1]:
+        df_ = (
+            df
+            .set_index(['year','indu_2', 'soe', 'geocode4_corr'])
+            .unstack(-2)
+            .assign(
+                soe_dominated = lambda x: x[(v, 'SOE')] > x[(v, 'PRIVATE')],
+                share_soe = lambda x: x[(v, 'SOE')] / (x[(v, 'SOE')] + x[(v, 'PRIVATE')])
+            )
+            #.loc[lambda x: x['soe_dominated'].isin([True])]
+            .collapse_levels("_")
+            .reset_index()
+            [['year','geocode4_corr', 'indu_2', "soe_dominated", 
+             'share_soe'
+             ]]
+            .loc[lambda x: x['year'].isin(["2002"])]
+            .drop(columns = ['year'])
+            .rename(columns = {'indu_2':'ind2'})
+            .loc[lambda x: x['share_soe']> t]
+            #.groupby(['soe_dominated'])
+            #.agg({'share_soe':'describe'})
+            .to_csv('list_city_soe_{}_{}.csv'.format(v, t))
+        )
+```
+
+```sos kernel="SoS"
+query = """
+WITH test AS (
+  SELECT 
+    *,
+    CASE WHEN LENGTH(cic) = 4 THEN substr(cic, 1, 2) ELSE concat(
+      '0', 
+      substr(cic, 1, 1)
+    ) END AS indu_2,
+    CASE WHEN ownership = 'SOE' THEN 'SOE' ELSE 'PRIVATE' END AS soe_vs_pri,
+    CASE WHEN ownership in ('HTM', 'FOREIGN') THEN 'FOREIGN' ELSE 'DOMESTIC' END AS for_vs_dom 
+  FROM 
+    firms_survey.asif_firms_prepared 
+    INNER JOIN (
+      SELECT 
+        extra_code, 
+        geocode4_corr 
+      FROM 
+        chinese_lookup.china_city_code_normalised 
+      GROUP BY 
+        extra_code, 
+        geocode4_corr
+    ) as no_dup_citycode ON asif_firms_prepared.citycode = no_dup_citycode.extra_code
+  
+) 
+SELECT year, foreign, geocode4_corr, indu_2,SUM(output) as output, SUM(employ) as employ, SUM(captal) as capital
+FROM (
+SELECT *,
+CASE WHEN ownership in ('HTM', 'FOREIGN') THEN 'FOREIGN' ELSE 'DOMESTIC' END AS foreign
+FROM test 
+  )
+  GROUP BY foreign, geocode4_corr, year, indu_2
+
+"""
+df = (s3.run_query(
+        query=query,
+        database=db,
+        s3_output='SQL_OUTPUT_ATHENA',
+        filename="test",  # Add filename to print dataframe
+        destination_key='SQL_OUTPUT_ATHENA/CSV',  #Use it temporarily
+        dtype = dtypes
+    )
+     )
+```
+
+```sos kernel="SoS"
+for v in ['output','employ', 'capital']:
+    for t in [.5, .4, .3, .2, .1]:
+        (
+            df
+            .set_index(['year','indu_2', 'foreign', 'geocode4_corr'])
+            .unstack(-2)
+            .assign(
+                for_dominated = lambda x: x[(v, 'FOREIGN')] > x[(v, 'DOMESTIC')],
+                share_for = lambda x: x[(v, 'FOREIGN')] / (x[(v, 'FOREIGN')] + x[(v, 'DOMESTIC')])
+            )
+            .collapse_levels("_")
+            .reset_index()
+            [['year','geocode4_corr', 'indu_2', "for_dominated", 
+             'share_for'
+             ]]
+            .loc[lambda x: x['year'].isin(["2002"])]
+            .drop(columns = ['year'])
+            .rename(columns = {'indu_2':'ind2'})
+            .loc[lambda x: x['share_for']> t]
+            #.groupby(['soe_dominated'])
+            #.agg({'share_soe':'describe'})
+            .to_csv('list_city_for_{}_{}.csv'.format(v, t))
+        )
+```
 
 <!-- #region kernel="SoS" -->
 ### SO2
 <!-- #endregion -->
 
 ```sos kernel="SoS"
-folder = 'Tables_0'
+folder = 'Tables_1'
 table_nb = 2
 table = 'table_{}'.format(table_nb)
 path = os.path.join(folder, table + '.txt')
 if os.path.exists(folder) == False:
         os.mkdir(folder)
-#for ext in ['.txt', '.tex', '.pdf']:
-#    x = [a for a in os.listdir(folder) if a.endswith(ext)]
-#    [os.remove(os.path.join(folder, i)) for i in x]
+for ext in ['.txt', '.pdf']:
+    x = [a for a in os.listdir(folder) if a.endswith(ext)]
+    [os.remove(os.path.join(folder, i)) for i in x]
 ```
 
 ```sos kernel="R"
 %get path table
+df_soe <- df_final %>% inner_join(read_csv('list_city_soe_employ_0.3.csv'))
+df_priv <- df_final %>% left_join(read_csv('list_city_soe_employ_0.3.csv')) %>% filter(is.na(share_soe))
 ### CITY DOMINATED
 t_0 <- felm(log(tso2) ~  
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply) * credit_constraint
-           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(
-               dominated_output_soe_c == TRUE & tso2 > 500),
+           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_soe%>% filter(tso2 > 500),
             exactDOF = TRUE)
 
 t_1 <- felm(log(tso2) ~  
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply) * credit_constraint
-           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(
-               dominated_output_soe_c == FALSE & tso2 > 500),
+           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_priv%>% filter(tso2 > 500),
             exactDOF = TRUE)
 
 t_2 <- felm(log(tso2) ~  
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply_long_term) * credit_constraint
-           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(
-               dominated_output_soe_c == TRUE & tso2 > 500),
+           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_soe%>% filter(tso2 > 500),
             exactDOF = TRUE)
 
 t_3 <- felm(log(tso2) ~  
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply_long_term) * credit_constraint
-           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(
-               dominated_output_soe_c == FALSE & tso2 > 500),
+           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_priv%>% filter(tso2 > 500),
             exactDOF = TRUE)
 
 t_4 <- felm(log(tso2) ~  
             log(output) + log(employment) + log(capital) + 
             log(fin_dev) * credit_constraint
-           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr+ ind2, df_final%>% filter(
-               dominated_output_soe_c == TRUE & tso2 > 500),
+           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr+ ind2, df_soe%>% filter(tso2 > 500),
             exactDOF = TRUE)
 
 t_5 <- felm(log(tso2) ~  
             log(output) + log(employment) + log(capital) + 
             log(fin_dev) * credit_constraint
-           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr+ ind2, df_final%>% filter(
-               dominated_output_soe_c == FALSE & tso2 > 500),
+           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr+ ind2, df_priv%>% filter(tso2 > 500),
             exactDOF = TRUE)
 dep <- "Dependent variable: Pollution emission"
 fe1 <- list(
@@ -798,12 +926,6 @@ tbe1  = "All loan is the share of total loan normalised by the GDP. " \
 "Heteroskedasticity-robust standard errors " \
 "clustered at the city-industry level appear in parentheses."\
  
-multicolumn ={
-    'SO2': 3,
-    'COD': 3,
-    'Waste water': 3,
-}
-
 #multi_lines_dep = '(city/product/trade regime/year)'
 new_r = ['& Above', 'Below','Above', 'Below', 'Above', 'Below' ]
 lb.beautify(table_number = table_nb,
@@ -826,60 +948,56 @@ lb.beautify(table_number = table_nb,
 <!-- #endregion -->
 
 ```sos kernel="SoS"
-folder = 'Tables_0'
+folder = 'Tables_1'
 table_nb = 3
 table = 'table_{}'.format(table_nb)
 path = os.path.join(folder, table + '.txt')
 if os.path.exists(folder) == False:
         os.mkdir(folder)
-#for ext in ['.txt', '.tex', '.pdf']:
-#    x = [a for a in os.listdir(folder) if a.endswith(ext)]
-#    [os.remove(os.path.join(folder, i)) for i in x]
+for ext in ['.txt', '.pdf']:
+    x = [a for a in os.listdir(folder) if a.endswith(ext)]
+    [os.remove(os.path.join(folder, i)) for i in x]
 ```
 
 ```sos kernel="R"
 %get path table
+df_for <- df_final %>% inner_join(read_csv('list_city_for_employ_0.3.csv'))
+df_dom <- df_final %>% left_join(read_csv('list_city_for_employ_0.3.csv')) %>% filter(is.na(share_for))
 ### CITY DOMINATED
 t_0 <- felm(log(tso2) ~  
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply) * credit_constraint
-           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(
-               dominated_output_for_c == TRUE & tso2 > 500),
+           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_for%>% filter(tso2 > 500),
             exactDOF = TRUE)
 
 t_1 <- felm(log(tso2) ~  
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply) * credit_constraint
-           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(
-               dominated_output_for_c == FALSE & tso2 > 500),
+           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_dom%>% filter(tso2 > 500),
             exactDOF = TRUE)
 
 t_2 <- felm(log(tso2) ~  
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply_long_term) * credit_constraint
-           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(
-               dominated_output_for_c == TRUE & tso2 > 500),
+           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_for%>% filter(tso2 > 500),
             exactDOF = TRUE)
 
 t_3 <- felm(log(tso2) ~  
             log(output) + log(employment) + log(capital) + 
             log(lag_credit_supply_long_term) * credit_constraint
-           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(
-               dominated_output_for_c == FALSE & tso2 > 500),
+           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_dom%>% filter(tso2 > 500),
             exactDOF = TRUE)
 
 t_4 <- felm(log(tso2) ~  
             log(output) + log(employment) + log(capital) + 
             log(fin_dev) * credit_constraint
-           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr+ ind2, df_final%>% filter(
-               dominated_output_for_c == TRUE & tso2 > 500),
+           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr+ ind2, df_for%>% filter(tso2 > 500),
             exactDOF = TRUE)
 
 t_5 <- felm(log(tso2) ~  
             log(output) + log(employment) + log(capital) + 
             log(fin_dev) * credit_constraint
-           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr+ ind2, df_final%>% filter(
-               dominated_output_for_c == FALSE & tso2 > 500),
+           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr+ ind2, df_dom%>% filter(tso2 > 500),
             exactDOF = TRUE)
 dep <- "Dependent variable: SO2 emission"
 fe1 <- list(
