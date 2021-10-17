@@ -861,6 +861,7 @@ for ext in ['.txt', '.pdf']:
 %get path table
 df_soe <- df_final %>% inner_join(read_csv('list_city_soe_employ_0.3.csv'))
 df_priv <- df_final %>% left_join(read_csv('list_city_soe_employ_0.3.csv')) %>% filter(is.na(share_soe))
+print(dim(df_soe)[1] + dim(df_priv)[1] == dim(df_final)[1])
 ### CITY DOMINATED
 t_0 <- felm(log(tso2) ~  
             log(output) + log(employment) + log(capital) + 
@@ -963,6 +964,7 @@ for ext in ['.txt', '.pdf']:
 %get path table
 df_for <- df_final %>% inner_join(read_csv('list_city_for_employ_0.3.csv'))
 df_dom <- df_final %>% left_join(read_csv('list_city_for_employ_0.3.csv')) %>% filter(is.na(share_for))
+print(dim(df_for)[1] + dim(df_dom)[1] == dim(df_final)[1])
 ### CITY DOMINATED
 t_0 <- felm(log(tso2) ~  
             log(output) + log(employment) + log(capital) + 
