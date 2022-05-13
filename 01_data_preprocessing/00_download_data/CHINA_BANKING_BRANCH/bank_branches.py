@@ -146,7 +146,7 @@ def find_city(x):
 #list_candidates = list(df_cities['citycn_correct'].drop_duplicates()) + \
 #list(df_cities['cityen_correct'].drop_duplicates().str.lower())
 
-geolocator = GoogleV3(api_key="AIzaSyA0wx-R4_J3EloZi8HSCch26YELrPBaT3k")
+geolocator = GoogleV3(api_key="")
 geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1)
 ####
 tqdm.pandas()
@@ -159,12 +159,11 @@ test = (
     )
 )
 
-##### Test NLP 
+##### Test NLP
 from polyfuzz.models import TFIDF
 from polyfuzz import PolyFuzz
 
 #### TFIDF approach
-tfidf = TFIDF(n_gram_range=(3, 3), min_similarity=0, matcher_id="TF-IDF")
 
 tqdm.pandas()
 empty_city = test.loc[lambda x: x['city'].isin([np.nan])]
