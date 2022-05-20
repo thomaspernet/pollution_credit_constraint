@@ -80,7 +80,7 @@ import numpy as np
 #import seaborn as sns
 import os, shutil, json
 import sys
-
+import re
 path = os.getcwd()
 parent_path = str(Path(path).parent.parent.parent)
 
@@ -213,6 +213,710 @@ if download_data:
     s3.remove_file(full_path_filename)
     df.head()
     
+```
+
+<!-- #region kernel="SoS" -->
+Pollution abatement equipment
+<!-- #endregion -->
+
+```sos kernel="SoS"
+query = """
+WITH aggregate_pol AS (
+  SELECT 
+    year, 
+    geocode4_corr, 
+    ind2, 
+    SUM(tlssnl) as tlssnl,
+    SUM(tdwastegas_equip) as tdwastegas_equip,
+    SUM(tdso2_equip) as tdso2_equip,
+    SUM(tfqzlssnl) as tfqzlssnl,
+    SUM(ttlssnl) as ttlssnl
+  FROM 
+    (
+      SELECT 
+        year, 
+        citycode, 
+        geocode4_corr, 
+        --cityen,
+        --china_city_sector_pollution.cityen,
+        -- indus_code,
+        ind2, 
+        tso2, 
+        tlssnl,
+        tdwastegas_equip,
+        tdso2_equip,
+        tfqzlssnl,
+        ttlssnl,
+        firmdum,
+        tfirm
+        -- lower_location, 
+        --larger_location, 
+        --coastal 
+      FROM 
+        environment.china_city_sector_pollution 
+        INNER JOIN (
+          SELECT 
+            extra_code, 
+            geocode4_corr--,
+            --cityen
+          FROM 
+            chinese_lookup.china_city_code_normalised 
+          GROUP BY 
+            extra_code, 
+            geocode4_corr--,
+            --cityen
+        ) as no_dup_citycode ON china_city_sector_pollution.citycode = no_dup_citycode.extra_code
+    ) 
+  GROUP BY 
+    year, 
+    geocode4_corr, 
+    ind2
+) 
+SELECT *
+FROM aggregate_pol
+"""
+df_pol = (s3.run_query(
+            query=query,
+            database=db,
+            s3_output='SQL_OUTPUT_ATHENA',
+            filename=filename,  # Add filename to print dataframe
+            destination_key='SQL_OUTPUT_ATHENA/CSV',  #Use it temporarily
+            dtype = dtypes
+        )
+                )
+```
+
+<!-- #region kernel="SoS" -->
+Macro variables
+<!-- #endregion -->
+
+```sos kernel="SoS"
+query = """
+SELECT no_dup_citycode.geocode4_corr,  year, 
+gdp,
+population,
+gdp/population as gdp_cap,
+employment as employment_macro,
+fixedasset as fixedasset_macro
+FROM china.province_macro_data
+INNER JOIN (
+          SELECT 
+            extra_code, 
+            geocode4_corr
+          FROM 
+            chinese_lookup.china_city_code_normalised 
+          GROUP BY 
+            extra_code, 
+            geocode4_corr
+        ) as no_dup_citycode ON province_macro_data.geocode4_corr = no_dup_citycode.extra_code
+"""
+df_macro = (s3.run_query(
+            query=query,
+            database=db,
+            s3_output='SQL_OUTPUT_ATHENA',
+            filename=filename,  # Add filename to print dataframe
+            destination_key='SQL_OUTPUT_ATHENA/CSV',  #Use it temporarily
+            dtype = dtypes
+        )
+                )
+```
+
+<!-- #region kernel="SoS" -->
+Bank deregulation
+<!-- #endregion -->
+
+```sos kernel="SoS"
+def get_company_registration_type(x):
+    regex = r'有限公司|信用合作联社|有限责任公司|旧市支行|族自治州分行|县支行|市支行|村支行|市分行|农村合作银行|自治区分行|支行|合作社联合社'\
+'|分行|资金互助社|信用社联合社|股份公司|住宅金融事业部|国家开发银行|总行营业部|合作金融结算服务中心|信用合作社|信托投资公司'
+    matches = re.findall(regex,x)
+    if len(matches) > 0:
+        return matches[0]
+    else:
+        return np.nan 
+def get_type(x):
+    if re.search(r"中国工商银行|中国建设银行|中国银行|中国农业银行|交通银行|中国邮政储蓄银行", str(x)):
+        return (re.search(r"中国工商银行|中国建设银行|中国银行|中国农业银行|交通银行|中国邮政储蓄银行", 
+                          str(x)).group(), "SOB")
+    elif re.search(r"中国农业发展银行|国家开发银行|中国进出口银行", str(x)):
+        return (re.search(r"中国农业发展银行|国家开发银行|中国进出口银行", str(x)).group(),
+                "policy bank")
+    elif re.search(r"股份制商业银行", str(x)):
+        return (re.search(r"股份制商业银行|银行股份", str(x)).group(), "joint-stock commercial bank")
+    elif re.search(r"城市商业银行", str(x)):
+        return (re.search(r"城市商业银行", str(x)).group(), "city commercial bank")
+    elif re.search(r"农村商业银行", str(x)):
+        return (re.search(r"农村商业银行", str(x)).group(), "rural commercial bank")
+    elif re.search(r"外资银行", str(x)):
+        return (re.search(r"外资银行", str(x)).group(), "foreign bank")
+    else:
+        return np.nan
+```
+
+```sos kernel="SoS"
+query = """
+SELECT *
+FROM china.branches_raw_csv
+"""
+df_bank = (
+    s3.run_query(
+        query=query,
+        database=db,
+        s3_output="SQL_OUTPUT_ATHENA",
+        filename="bank",  # Add filename to print dataframe
+        destination_key="SQL_OUTPUT_ATHENA/CSV",  # Use it temporarily
+        dtype = {'id':'str','geocode4_corr':'str', 'lostReason':'str',
+                       'location':'str', 'city_temp':'str', 'points':'str'}
+    )
+    .assign(
+        setdate=lambda x: pd.to_datetime(x["setdate"].astype("Int64").astype(str), errors ='coerce'),
+        printdate=lambda x: pd.to_datetime(x["printdate"].astype("Int64").astype(str), errors ='coerce'),
+        year_setdate=lambda x: x["setdate"].dt.year.astype("Int64").astype(str),
+        bank_temp=lambda x: x.apply(
+            lambda x: get_company_registration_type(x["fullname"]), axis=1
+        ),
+        geocode4_corr = lambda x: x['geocode4_corr'].astype("Int64").astype(str)
+    )
+     .assign(
+         registration_type=lambda x: x.apply(
+            lambda x: np.nan if pd.isna(x["bank_temp"]) else x["bank_temp"], axis=1
+        ),
+        bank_full_name=lambda x: x.apply(
+            lambda x: x["fullname"]
+            if pd.isna(x["bank_temp"])
+            else x["fullname"].split(x["registration_type"][0])[0],
+            axis=1,
+        ),
+        list_bank_type=lambda x: x.apply(lambda x: get_type(x["bank_full_name"]), axis=1),
+        bank_type=lambda x: x.apply(
+            lambda x: np.nan if pd.isna(x["list_bank_type"]) else x["list_bank_type"][0], axis=1
+        ),
+        bank_type_adj=lambda x: x.apply(
+            lambda x: np.nan if pd.isna(x["list_bank_type"]) else x["list_bank_type"][1], axis=1
+        )
+    )
+    .drop(columns=["bank_temp"])
+)
+query = """
+SELECT *
+FROM china.china_bank_information
+"""
+df_bank_info = (
+    s3.run_query(
+        query=query,
+        database=db,
+        s3_output="SQL_OUTPUT_ATHENA",
+        filename="bank",  # Add filename to print dataframe
+        destination_key="SQL_OUTPUT_ATHENA/CSV",  # Use it temporarily
+        dtype=dtypes,
+    )
+    .drop_duplicates(subset=["shortbnm"])
+    .replace(
+        {
+            "bnature": {
+                1: "政策性银行",
+                2: "国有控股大型商业银行",
+                3: "股份制商业银行",
+                4: "城市商业银行",
+                5: "农村商业银行",
+                6: "外资银行",
+                7: "其他",
+                8: "农合行",
+                9: "农信社",
+                10: "三类新型农村金融机构",
+            }
+        }
+    )
+)
+df_bank_info.shape
+```
+
+```sos kernel="SoS"
+df_bank_info.head(2)
+```
+
+```sos kernel="SoS"
+df_bank.head(2)
+```
+
+```sos kernel="SoS"
+df_bank['registration_type'].value_counts()
+```
+
+```sos kernel="SoS"
+df_bank['bank_type'].value_counts()
+```
+
+```sos kernel="SoS"
+df_bank['bank_type_adj'].value_counts()
+```
+
+```sos kernel="SoS"
+(
+    df_bank
+    .loc[lambda x: x['setdate'] < "2022"]
+    .set_index(['setdate'])
+    .groupby([pd.Grouper(freq='Y')])
+    .agg({"id":"nunique"})
+    .assign(cumsum = lambda x: x['id'].cumsum())
+    .drop(columns = ['id'])
+    .plot
+    .line(title = 'total branches over time',figsize=(8,8))
+    .legend(loc='center left',bbox_to_anchor=(1.0, 0.5))
+    
+)
+```
+
+```sos kernel="SoS"
+(
+    df_bank
+    .loc[lambda x: x['setdate'] < "2022"]
+    .set_index(['setdate'])
+    .groupby([pd.Grouper(freq='Y')])
+    .agg({"id":"nunique"})
+    #.assign(cumsum = lambda x: x['id'].cumsum())
+    #.drop(columns = ['id'])
+    .plot
+    .line(title = 'Accumulation branches over time',figsize=(8,8))
+    .legend(loc='center left',bbox_to_anchor=(1.0, 0.5))   
+)
+```
+
+<!-- #region kernel="SoS" -->
+list of banks in China
+
+- Policy banks: China has three policy banks. Among them, China Development Bank was incorporated in December 2008 and officially defined by the State Council as a development finance institution in March 2015
+    - 中国农业发展银行
+    - 国家开发银行
+    - 中国进出口银行
+- State-owned Commercial Banks: China has six state-owned commercial banks. These banks are ranked by their Tier 1 capital amount as of 2018. 
+    - 中国工商银行
+    - 中国建设银行
+    - 中国银行
+    - 中国农业银行
+    - 交通银行
+    - 中国邮政储蓄银行
+- Commercial Banks: China has 12 national commercial banks. These banks are ordered by their Tier 1 capital amount as of 2018
+    - 招商银行
+    - 上海浦东发展银行
+    - 兴业银行
+    - 中信银行
+    - 中国民生银行
+    - 中国光大银行
+    - 平安银行
+    - 华夏银行
+    - 广发银行
+    - 浙商银行
+    - 渤海银行
+    - 恒丰银行
+    
+Source: https://en.wikipedia.org/wiki/List_of_banks_in_China. More info in CSMAR data (where we got the data)df_bank_info
+<!-- #endregion -->
+
+```sos kernel="SoS"
+df_bank.shape
+```
+
+```sos kernel="SoS"
+from polyfuzz import PolyFuzz
+from polyfuzz.models import RapidFuzz
+from polyfuzz.models import Embeddings
+from flair.embeddings import TransformerWordEmbeddings
+import seaborn as sns
+sns.set_style("whitegrid",rc={'figure.figsize':(11.7,8.27)})
+```
+
+<!-- #region kernel="SoS" -->
+We already know the status of 75% of our dataset. The remaining banks are mostly city banks, so we well use fuzzy string matching to find them from the CSMAR dataset
+<!-- #endregion -->
+
+```sos kernel="SoS"
+df_bank['bank_type_adj'].dropna().shape[0]/df_bank.shape[0]
+```
+
+```sos kernel="SoS"
+banks = (
+    [ i.replace('（中国）','').strip() for i in 
+     df_bank.loc[lambda x: x['bank_type_adj'].isin([np.nan])]['bank_full_name'].dropna().drop_duplicates().to_list()
+     if len(i) > 1]
+)
+bank_info = df_bank_info['shortbnm'].to_list()
+#bank_info_pinyin =  [pinyin.get(i, format="strip", delimiter=" ") for i in bank_info]
+#model = PolyFuzz(rapidfuzz_matcher).match(banks, bank_info)
+#model.get_matches()
+```
+
+<!-- #region kernel="SoS" -->
+Let's make sure the city (or at least the location) is in the name; We can use this transformers https://huggingface.co/Davlan/xlm-roberta-base-wikiann-ner?text=%E6%9C%9D%E9%98%B3%E5%B8%82%E5%8F%8C%E5%A1%94%E5%8C%BA%E5%86%9C%E6%9D%91
+<!-- #endregion -->
+
+```sos kernel="SoS"
+from transformers import AutoTokenizer, AutoModelForTokenClassification
+from transformers import pipeline
+tokenizer = AutoTokenizer.from_pretrained("Davlan/xlm-roberta-base-wikiann-ner")
+
+model = AutoModelForTokenClassification.from_pretrained("Davlan/xlm-roberta-base-wikiann-ner")
+```
+
+```sos kernel="SoS"
+def get_proba_city(x):
+    ner = pipeline("ner", tokenizer=tokenizer,model=model,aggregation_strategy='simple')
+    ner_results = ner(x)
+    if len([i for i in ner_results if i['entity_group'] == 'LOC']) >0:
+        dic = max(
+            [i for i in ner_results if i['entity_group'] == 'LOC'],
+            key=lambda x:x['score']
+        )
+        dic['name'] = x
+        dic['applicable'] = True
+    else:
+        dic =  max(ner_results, key=lambda x:x['score'])
+        dic['name'] = x
+        dic['applicable'] = False
+    return dic
+```
+
+```sos kernel="SoS"
+from tqdm import tqdm
+```
+
+```sos kernel="SoS"
+regex_loc = '|'.join(df_bank_info['cityname'].drop_duplicates().to_list()) + \
+'|'+'|'.join(df_bank_info['provincename'].drop_duplicates().to_list()) + \
+'|'+ '|'.join([i.replace('市',"").replace("省",'').replace('自治区',"")
+ for i in df_bank_info['provincename'].drop_duplicates().to_list()]) + \
+'|'+ '|'.join([i.replace('市',"").replace("省",'').replace('自治区',"")
+ for i in df_bank_info['cityname'].drop_duplicates().to_list()])
+```
+
+```sos kernel="SoS"
+true_loc = [i for i in banks if re.search(regex_loc,i)]
+```
+
+```sos kernel="SoS"
+df_branch_to_check = pd.DataFrame([get_proba_city(i) for i in tqdm(banks) if i not in true_loc])
+```
+
+```sos kernel="SoS"
+df_branch_to_check.shape
+```
+
+```sos kernel="SoS"
+(
+    df_branch_to_check
+    .groupby(['applicable'])
+    .agg({'name':'unique'})
+)
+```
+
+<!-- #region kernel="SoS" -->
+we can remove the branches which are not location, which mean we need to find 1774 differents banks
+<!-- #endregion -->
+
+```sos kernel="SoS"
+banks_to_find = sorted(true_loc + df_branch_to_check.loc[lambda x: x['applicable'].isin([True])]['name'].to_list())
+```
+
+```sos kernel="SoS"
+banks_to_find[:10]
+```
+
+```sos kernel="SoS"
+to_find = True
+if to_find:
+    bert = TransformerWordEmbeddings('bert-base-multilingual-cased')
+    bert_matcher = Embeddings(bert, min_similarity=0)
+    models = PolyFuzz(bert_matcher).match(banks_to_find, bank_info)
+    models.get_matches().to_csv('branch_matches.csv', index = False)
+```
+
+```sos kernel="SoS"
+#bank_info
+```
+
+```sos kernel="SoS"
+from polyfuzz.models import RapidFuzz
+rapidfuzz_matcher = RapidFuzz(n_jobs=1)
+model = PolyFuzz(rapidfuzz_matcher).match(banks_to_find, bank_info)
+```
+
+```sos kernel="SoS"
+(
+    model.get_matches()
+    .sort_values(by = ['Similarity'])
+    .loc[lambda x: x["Similarity"] > 0.85]
+)
+```
+
+```sos kernel="SoS"
+df_bank_branches = (
+    pd.read_csv(
+        "branch_matches.csv",
+        dtype={
+            "id": "str",
+            "geocode4_corr": "str",
+            "lostReason": "str",
+            "location": "str",
+            "city_temp": "str",
+            "points": "str",
+        },
+    )
+    .sort_values(by=["Similarity"])
+    .loc[lambda x: x["Similarity"] > 0.85]
+    .merge(
+        df_bank_info.reindex(columns=["bnm_cn", "shortbnm", "bnature"]).rename(
+            columns={"shortbnm": "To"}
+        )
+    )
+    .replace(
+        {
+            "bnature": {
+                "政策性银行": "policy bank",
+                "国有控股大型商业银行": "sob",
+                "股份制商业银行": "joint-stock commercial bank",
+                "城市商业银行": "city commercial bank",
+                "农村商业银行": "rural commercial bank",
+                "外资银行": "foreign bank",
+                "其他": "other",
+                "农合行": "other",
+                "农信社": "other",
+                "三类新型农村金融机构": "other",
+            }
+        }
+    )
+    .rename(columns={"bnature": "bank_type_adj"})
+    .merge(
+        (
+            df_bank.drop_duplicates(subset=["bank_full_name"])
+            .reindex(
+                columns=[
+                    "id",
+                    "setdate",
+                    "year_setdate",
+                    "fullname",
+                    "bank_full_name",
+                    "registration_type",
+                    "city",
+                    "geocode4_corr",
+                    "bank_type",
+                    # "bank_type_adj",
+                ]
+            )
+            .assign(
+                bank_full_name_=lambda x: x["bank_full_name"]
+                .replace("（中国）", "")
+                .str.strip()
+            )
+            .rename(columns={"bank_full_name_": "From"})
+        )
+    )
+    .reindex(
+        columns=[
+            "id",
+            "setdate",
+            "year_setdate",
+            "fullname",
+            "bank_full_name",
+            "registration_type",
+            "city",
+            "geocode4_corr",
+            "bank_type",
+            "bank_type_adj",
+        ]
+    )
+)
+
+df_bank_branches = pd.concat(
+    [
+        (
+            df_bank.loc[
+                lambda x: ~x["id"].isin(df_bank_branches["id"].to_list())
+            ].reindex(
+                columns=[
+                    "id",
+                    "setdate",
+                    "year_setdate",
+                    "fullname",
+                    "bank_full_name",
+                    "registration_type",
+                    "city",
+                    "geocode4_corr",
+                    "bank_type",
+                    "bank_type_adj",
+                ]
+            )
+        ),
+        df_bank_branches,
+    ]
+).assign(
+    bank_type_adj_clean=lambda x: x.groupby(["bank_full_name"])[
+        "bank_type_adj"
+    ].transform(lambda x: x.ffill().bfill())
+)
+```
+
+```sos kernel="SoS"
+(
+    df_bank_branches
+    .loc[lambda x: x["bank_type_adj_clean"].isin(['city commercial bank'])]
+    ['bank_full_name']
+    .value_counts()
+    .reset_index()
+    .sort_values(by = ['index'])
+)
+```
+
+<!-- #region kernel="SoS" -->
+Example of banks without confident bank type
+<!-- #endregion -->
+
+```sos kernel="SoS"
+(
+    pd.read_csv(
+        "branch_matches.csv",
+        dtype={
+            "id": "str",
+            "geocode4_corr": "str",
+            "lostReason": "str",
+            "location": "str",
+            "city_temp": "str",
+            "points": "str",
+        },
+    )
+    .sort_values(by=["From"])
+    .loc[lambda x: x["Similarity"] <= 0.85]
+)
+```
+
+```sos kernel="SoS"
+df_bank_branches['bank_type_adj_clean'].value_counts()
+```
+
+```sos kernel="SoS"
+#from matplotlib import font_manager as fm, rcParams
+#import matplotlib.pyplot as plt
+#import seaborn as sns
+#import requests
+#filename = Path('simhei.zip')
+#url = 'http://legionfonts.com/download/simhei'
+#response = requests.get(url)
+#filename.write_bytes(response.content)
+#import zipfile
+#with zipfile.ZipFile(filename, 'r') as zip_ref:
+#    zip_ref.extractall(os.path.join(rcParams["datapath"], "fonts/ttf/"))
+```
+
+```sos kernel="SoS"
+temp= (
+    df_bank_branches
+    .loc[lambda x: ~x["bank_type_adj_clean"].isin(["SOB", "rural commercial bank",
+                                                   'policy bank', 'other',
+                                                   'joint-stock commercial bank','foreign bank'])]
+    .loc[lambda x: x['setdate'] < "2013"]
+    #
+    #.set_index(['setdate'])
+    .loc[lambda x: ~x['geocode4_corr'].isin(["<NA>"])]
+    .dropna(subset = ['bank_type_adj_clean'])
+    .groupby(['bank_type_adj_clean', 'bank_full_name'])
+    .agg({
+        "year_setdate":"min",
+    })
+    .reset_index()
+    .groupby(['year_setdate','bank_type_adj_clean'])
+    .agg({'bank_full_name':'count'})
+    .reset_index()
+    .assign(
+        year_setdate = lambda x: pd.to_datetime(x['year_setdate']),
+        bank_name_adjusted = lambda x: x.groupby('bank_type_adj_clean')['bank_full_name'].transform('cumsum')
+    )
+    .loc[lambda x: x['year_setdate'] >= "1995"]
+)
+
+sns.lineplot(data=temp, x="year_setdate", y="bank_name_adjusted", hue="bank_type_adj_clean")
+plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+```
+
+```sos kernel="SoS"
+temp = (
+    df_bank_branches
+    .loc[lambda x: ~x["bank_type_adj_clean"].isin(["SOB", "rural commercial bank",
+                                                   'policy bank', 'other',
+                                                   'joint-stock commercial bank','foreign bank'])]
+    .loc[lambda x: x['setdate'] < "2013"]
+    .loc[lambda x: x['setdate'] >= "1995"]
+    #.loc[lambda x: x['bank_type'].isin(['COMMERCIAL BANKS'])]
+    .set_index(['setdate'])
+    .groupby([pd.Grouper(freq='Y'), 'bank_type_adj_clean'])
+    .agg({"bank_full_name":"count"})
+    .assign(bank_name_adjusted = lambda x: x.groupby('bank_type_adj_clean')['bank_full_name'].transform('cumsum'))
+    .reset_index()
+)
+sns.lineplot(data=temp, x="setdate", y="bank_name_adjusted", hue="bank_type_adj_clean")
+plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+```
+
+<!-- #region kernel="SoS" -->
+Compute Herfhindal index
+<!-- #endregion -->
+
+```sos kernel="SoS"
+(
+    df_bank_branches
+    .loc[lambda x: ~x["bank_type_adj_clean"].isin([#"SOB",
+        "rural commercial bank",
+        'policy bank', 'other',
+        'joint-stock commercial bank','foreign bank'])]
+    .loc[lambda x: x['setdate'] < "2013"]
+    #
+    #.set_index(['setdate'])
+    .loc[lambda x: ~x['geocode4_corr'].isin(["<NA>"])]
+    .dropna(subset = ['bank_type_adj_clean'])
+    .groupby(['year_setdate', 'geocode4_corr'])
+    .agg({'id':'count'})
+    .sort_values(by = ["geocode4_corr", "year_setdate"])
+    #
+    .assign(
+        totalBranch = lambda x: 
+            x.groupby(['geocode4_corr'])['id'].transform('cumsum'),
+        score = lambda x: (x['id']/x['totalBranch'])**2
+           )
+    #.sort_values(by = ["geocode4_corr", "year_setdate"])
+    #.groupby(['year_setdate','geocode4_corr'])
+    #.agg({'score':'sum'})
+    #.sort_values(by = ['score'])
+    #.assign(hhi = lambda x: 1- x['score'])
+    #.reset_index()
+    #.loc[lambda x: x['year_setdate'] > "2000"]
+    #.agg({'score':'describe'})
+)
+```
+
+<!-- #region kernel="SoS" -->
+save new data
+<!-- #endregion -->
+
+```sos kernel="SoS"
+(
+    df
+    .merge(
+    df_pol, on = ['year', 'ind2', 'geocode4_corr'], how = 'left'
+    )
+    .merge(
+    df_macro, on = ['year', 'geocode4_corr'], how = 'left'
+    )
+    .assign(
+        tso2_eq_output = lambda x: (x['tdso2_equip'])/(x['output']/1000),
+        tso2_eq_output_1 = lambda x: (x['tdso2_equip']+1)/(x['output']/1000),
+        tso2_eq_asset = lambda x: (x['tdso2_equip'])/(x['total_asset']/1000),
+        tso2_eq_asset_1 = lambda x: (x['tdso2_equip']+1)/(x['total_asset']/1000),
+        constraint = lambda x: x['credit_constraint'] > -0.44,
+        constraint_1 = lambda x: x['credit_constraint'] > -0.26,
+        target = lambda x: np.where(x['tdso2_equip'] > 0, 1,0),
+        equipment_s02 = lambda x: (x['tdso2_equip']/x['tso2'])*100,
+        intensity=lambda x: x["ttlssnl"]/ x["sales"]
+    )
+    .to_csv(os.path.join(path_local, filename + '.csv'))
+)
 ```
 
 ```sos kernel="SoS" nteract={"transient": {"deleting": false}}
@@ -584,6 +1288,24 @@ list_polluted = s3.run_query(
             destination_key='SQL_OUTPUT_ATHENA/CSV',  #Use it temporarily
         )
 list_polluted
+```
+
+```sos kernel="R"
+summary(felm(log(tso2) ~  
+            log(output) + log(employment) + log(capital) + 
+            #intensity + 
+            log(lag_credit_supply) * credit_constraint 
+           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(tso2 > 500),
+            exactDOF = TRUE))
+```
+
+```sos kernel="R"
+summary(felm(log(tso2) ~  
+            log(output) + log(employment) + log(capital) + 
+            intensity + 
+            log(lag_credit_supply) * financial_dep_us 
+           |  fe_c_i + fe_t_i + fe_c_t|0 | geocode4_corr + ind2, df_final%>% filter(tso2 > 500),
+            exactDOF = TRUE))
 ```
 
 ```sos kernel="R"
