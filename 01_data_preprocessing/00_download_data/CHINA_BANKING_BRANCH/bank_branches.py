@@ -307,7 +307,29 @@ df_city_branches_final_geo = (
        'lon', 'altitude', 'city_match', 'geocode4_corr'])
 )
 
+###  clean up dataframe to avoid issue in Athena
+df_city_branches_final_geo = (
+df_city_branches_final_geo
+.assign(
+location = lambda x: x.apply(lambda x: np.nan if pd.isna(x['location']) else
+x['location'].replace(',', "|"), axis =1))
+.assign(
+**{
+    "{}".format(col): df_city_branches_final_geo[col]
+    .astype(str)
+    .str.replace('\,', '', regex=True)
+    .str.replace(r'\/|\(|\)|\?|\:|\-', '', regex=True)
+    .str.replace('__', '_')
+    .str.replace('\\n', '', regex=True)
+    .str.replace('\"','', regex=True)
+    for col in df_city_branches_final_geo.select_dtypes(include="object").columns
+}
+)
+)
 ####
+#df_city_branches_final_geo = (pd.read_csv("df_city_branches_final_geo.csv",
+#dtype = {'id':'str','geocode4_corr':'str', 'lostReason':'str',
+#'location':'str', 'city_temp':'str', 'points':'str'}))
 df_city_branches_final_geo.to_csv("df_city_branches_final_geo.csv", index=False)
 # SAVE S3
 s3.upload_file("df_city_branches_final_geo.csv",
