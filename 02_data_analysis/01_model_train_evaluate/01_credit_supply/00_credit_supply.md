@@ -77,7 +77,8 @@ from awsPy.aws_glue import service_glue
 from pathlib import Path
 import pandas as pd
 import numpy as np
-#import seaborn as sns
+import seaborn as sns
+import matplotlib.pyplot as plt
 import os, shutil, json
 import sys
 import re
@@ -856,38 +857,271 @@ plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
 ```
 
 <!-- #region kernel="SoS" -->
-Compute Herfhindal index
+Compute Herfhindal index:
+
+$$
+H H I_{c, t}=\sum_{k=1}^{N}\left(\frac{\text { Number of } \text { Branches }_{k t}}{\sum_{k=1}^{N} \text { Number of } \text { Branches }_{k t }}\right)^{2} .
+$$
+
+represents the HHI of the local banking market in city $c$ and
+is calculated on the basis of the number of bank branches of all banks k locally present for each year (with
+N the total number of banks in the country).
+
+We need to make a panel for each bank because the data only shows when a new branch is added, but in the case where there is no new branch, the bank has still a market share.
+
+See example below, the bank "上海银行股份" is in business since 2009, and created 2 other branches in 2011. In 2010, the bank was still opearting the branch, so we need to create this new row
+
+The bank regulation index:
+
+$$
+\operatorname{Bank}_{\mathrm{HHI}_{c, t}}=1-\mathrm{HHI}_{c, t}
+$$
+
+It ranges from zero to one with zero indicating the most stringent regulation and one indicating the most deregulation.
 <!-- #endregion -->
 
 ```sos kernel="SoS"
-(
+temp = (
     df_bank_branches
     .loc[lambda x: ~x["bank_type_adj_clean"].isin([#"SOB",
         "rural commercial bank",
         'policy bank', 'other',
         'joint-stock commercial bank','foreign bank'])]
     .loc[lambda x: x['setdate'] < "2013"]
-    #
-    #.set_index(['setdate'])
     .loc[lambda x: ~x['geocode4_corr'].isin(["<NA>"])]
     .dropna(subset = ['bank_type_adj_clean'])
-    .groupby(['year_setdate', 'geocode4_corr'])
+    .groupby(['year_setdate', 'geocode4_corr', 'bank_full_name'])
     .agg({'id':'count'})
-    .sort_values(by = ["geocode4_corr", "year_setdate"])
-    #
+    .sort_values(by = ["bank_full_name","geocode4_corr", "year_setdate"])
+    .loc[lambda x: x.index.get_level_values('bank_full_name').isin(['上海银行股份'])]
+    #.loc[lambda x: x.index.get_level_values('geocode4_corr').isin(['1101'])]
+    .reset_index()
+)
+temp.head()
+```
+
+```sos kernel="SoS"
+(
+    df_bank_branches
+    #.loc[lambda x: ~x["bank_type_adj_clean"].isin([
+        #"SOB",
+        #"rural commercial bank",
+        #'policy bank',
+        #'other',
+        #'joint-stock commercial bank',
+        #'foreign bank'
+    #])]
+    #.loc[lambda x: x['setdate'] < "2013"]
+    .loc[lambda x: ~x['geocode4_corr'].isin(["<NA>"])]
+    .dropna(subset = ['bank_type_adj_clean'])
+    .groupby(['year_setdate', 'geocode4_corr', 'bank_full_name'])
+    .agg({'id':'count'})
+    .sort_values(by = ["bank_full_name","geocode4_corr", "year_setdate"])
+    .reset_index()
+    .pivot_table(values="id", index=["bank_full_name", 'geocode4_corr'], columns="year_setdate")
+    .fillna(0)
+    .stack()
+    .reset_index()
+    .rename(columns = {0:'count'})
     .assign(
-        totalBranch = lambda x: 
-            x.groupby(['geocode4_corr'])['id'].transform('cumsum'),
-        score = lambda x: (x['id']/x['totalBranch'])**2
+        totalBranchBank = lambda x: 
+            x.groupby(["bank_full_name",'geocode4_corr'])['count'].transform('cumsum'),
+        totalBranchCity = lambda x: 
+            x.groupby(["geocode4_corr",'year_setdate'])['totalBranchBank'].transform('sum'),
+        score = lambda x: (x['totalBranchBank']/x['totalBranchCity'])**2
            )
-    #.sort_values(by = ["geocode4_corr", "year_setdate"])
-    #.groupby(['year_setdate','geocode4_corr'])
-    #.agg({'score':'sum'})
-    #.sort_values(by = ['score'])
-    #.assign(hhi = lambda x: 1- x['score'])
-    #.reset_index()
-    #.loc[lambda x: x['year_setdate'] > "2000"]
-    #.agg({'score':'describe'})
+    .groupby(['year_setdate','geocode4_corr'])
+    .agg({'score':'sum'})
+    .reset_index()
+    .dropna(subset = ['score'])
+    .loc[lambda x: x['year_setdate'] > "1995"]
+    .groupby(['year_setdate'])
+    .agg({'score':'mean'})
+    .assign(deregulation = lambda x: 1 - x['score'])
+    .drop(columns = ['score'])
+    .plot
+    .line(title = 'deregulation',figsize=(15,10))
+    .legend(loc='center left',bbox_to_anchor=(1.0, 0.5))
+)
+```
+
+<!-- #region kernel="SoS" -->
+Concentration ratio
+
+$$
+\mathrm{CR}_{\text {bigfour }_{c, t}}=\left(\operatorname{Branch}_{c, t}^{\mathrm{BOC}}+\operatorname{Branch}_{c, t}^{\mathrm{ICBC}}+\operatorname{Branch}_{c, t}^{\mathrm{CCB}}+\operatorname{Branch}_{c, t}^{\mathrm{ABC}}\right) / \text { TotalBranch }_{c, t}
+$$
+
+with
+
+Bank of China (BOC), Agricultural Bank of China (ABC), China Construction Bank (CCB) and Industrial and Commercial Bank of China (ICBC).
+<!-- #endregion -->
+
+```sos kernel="SoS"
+def big_four(x):
+    if x == "中国农业银行股份":
+        return "中国农业银行股份"
+    elif x == "中国工商银行股份":
+        return "中国工商银行股份"
+    elif x == "中国建设银行股份":
+        return "中国建设银行股份"
+    elif x == "中国银行股份":
+        return "中国银行股份"
+    else:
+        return 'other'
+```
+
+```sos kernel="SoS"
+(
+    df_bank_branches
+    .assign(
+    sob = lambda x: x.apply(lambda x: big_four(x['bank_full_name']), axis =1)
+    )
+    .loc[lambda x: ~x['geocode4_corr'].isin(["<NA>"])]
+    .dropna(subset = ['bank_type_adj_clean'])
+    .groupby(['year_setdate', 'geocode4_corr', 'sob'])
+    .agg({'id':'count'})
+    .sort_values(by = ["sob","geocode4_corr", "year_setdate"])
+    .reset_index()
+    .pivot_table(values="id", index=["sob", 'geocode4_corr'], columns="year_setdate")
+    .fillna(0)
+    .stack()
+    .reset_index()
+    .rename(columns = {0:'count'})
+    .assign(
+        totalBranchBank = lambda x: 
+            x.groupby(["sob",'geocode4_corr'])['count'].transform('cumsum'),
+        totalBranchCity = lambda x: 
+            x.groupby(["geocode4_corr",'year_setdate'])['totalBranchBank'].transform('sum'),
+    #    score = lambda x: (x['totalBranchBank']/x['totalBranchCity'])**2
+           )
+    .loc[lambda x: x['sob']!= 'other']
+    .set_index(['sob','geocode4_corr', 'year_setdate','totalBranchCity'])
+    .drop(columns = ['count'])
+    .unstack(0)
+    .assign(total_sob = lambda x: x.sum(axis =1))
+    .reset_index(['totalBranchCity'])
+    .assign(
+    concentration_sob = lambda x: x[('total_sob','')] /x[('totalBranchCity','')] 
+    )
+    .reindex(columns = [('total_sob',''),('concentration_sob','')])
+    .droplevel(axis = 1, level =1)
+    .reset_index()
+    .dropna(subset = ['concentration_sob'])
+    .loc[lambda x: x['year_setdate'] > "1995"]
+    .groupby(['year_setdate'])
+    .agg({'concentration_sob':'mean'})
+    .assign(concentration = lambda x: 1 - x['concentration_sob'])
+    .drop(columns = ['concentration_sob'])
+    .plot
+    .line(title = 'concentration SOB',figsize=(15,10))
+    .legend(loc='center left',bbox_to_anchor=(1.0, 0.5))
+)
+```
+
+<!-- #region kernel="SoS" -->
+Add the data to the pollution dataset
+<!-- #endregion -->
+
+```sos kernel="SoS"
+df_deregulation =  (
+    (
+        df_bank_branches.loc[lambda x: ~x["geocode4_corr"].isin(["<NA>"])]
+        .groupby(["year_setdate", "geocode4_corr", "bank_type_adj_clean"])
+        .agg({"id": "count"})
+        .rename(columns={"id": "nb_branches"})
+        .unstack(-1)
+        .fillna(0)
+        .droplevel(axis=1, level=0)
+        .reset_index()
+        .loc[lambda x: x["year_setdate"] > "2000"]
+        .loc[lambda x: x["year_setdate"] < "2008"]
+    )
+    .merge(
+        (
+            df_bank_branches.loc[lambda x: ~x["geocode4_corr"].isin(["<NA>"])]
+            .dropna(subset=["bank_type_adj_clean"])
+            .groupby(["year_setdate", "geocode4_corr", "bank_full_name"])
+            .agg({"id": "count"})
+            .sort_values(by=["bank_full_name", "geocode4_corr", "year_setdate"])
+            .reset_index()
+            .pivot_table(
+                values="id",
+                index=["bank_full_name", "geocode4_corr"],
+                columns="year_setdate",
+            )
+            .fillna(0)
+            .stack()
+            .reset_index()
+            .rename(columns={0: "count"})
+            .assign(
+                totalBranchBank=lambda x: x.groupby(
+                    ["bank_full_name", "geocode4_corr"]
+                )["count"].transform("cumsum"),
+                totalBranchCity=lambda x: x.groupby(["geocode4_corr", "year_setdate"])[
+                    "totalBranchBank"
+                ].transform("sum"),
+                score=lambda x: (x["totalBranchBank"] / x["totalBranchCity"]) ** 2,
+            )
+            .groupby(["year_setdate", "geocode4_corr"])
+            .agg({"score": "sum"})
+            .reset_index()
+            .dropna(subset=["score"])
+            .loc[lambda x: x["year_setdate"] > "2000"]
+            .loc[lambda x: x["year_setdate"] < "2008"]
+            .assign(deregulation_ct=lambda x: 1 - x["score"])
+        ),
+        how="left",
+        on=["year_setdate", "geocode4_corr"],
+    )
+    .merge(
+        (
+            df_bank_branches.assign(
+                sob=lambda x: x.apply(lambda x: big_four(x["bank_full_name"]), axis=1)
+            )
+            .loc[lambda x: ~x["geocode4_corr"].isin(["<NA>"])]
+            .dropna(subset=["bank_type_adj_clean"])
+            .groupby(["year_setdate", "geocode4_corr", "sob"])
+            .agg({"id": "count"})
+            .sort_values(by=["sob", "geocode4_corr", "year_setdate"])
+            .reset_index()
+            .pivot_table(
+                values="id", index=["sob", "geocode4_corr"], columns="year_setdate"
+            )
+            .fillna(0)
+            .stack()
+            .reset_index()
+            .rename(columns={0: "count"})
+            .assign(
+                totalBranchBank=lambda x: x.groupby(["sob", "geocode4_corr"])[
+                    "count"
+                ].transform("cumsum"),
+                totalBranchCity=lambda x: x.groupby(["geocode4_corr", "year_setdate"])[
+                    "totalBranchBank"
+                ].transform("sum"),
+                #    score = lambda x: (x['totalBranchBank']/x['totalBranchCity'])**2
+            )
+            .loc[lambda x: x["sob"] != "other"]
+            .set_index(["sob", "geocode4_corr", "year_setdate", "totalBranchCity"])
+            .drop(columns=["count"])
+            .unstack(0)
+            .assign(total_sob=lambda x: x.sum(axis=1))
+            .reset_index(["totalBranchCity"])
+            .assign(
+                concentration_sob=lambda x: x[("total_sob", "")]
+                / x[("totalBranchCity", "")]
+            )
+            .reindex(columns=[("total_sob", ""), ("concentration_sob", "")])
+            .droplevel(axis=1, level=1)
+            .reset_index()
+            .dropna(subset=["concentration_sob"])
+            .loc[lambda x: x["year_setdate"] > "2000"]
+            .loc[lambda x: x["year_setdate"] < "2008"]
+            .assign(concentration_sob_ct=lambda x: 1 - x["concentration_sob"])
+        ),
+        how="left",
+        on=["year_setdate", "geocode4_corr"],
+    )
 )
 ```
 
