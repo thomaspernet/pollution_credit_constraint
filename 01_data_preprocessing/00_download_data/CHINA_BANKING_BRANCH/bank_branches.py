@@ -39,9 +39,9 @@ s3 = service_s3.connect_S3(client=client,
 PATH_S3 = "DATA/ECON/CHINA/CHINA_BANKING_AND_INSURANCE_REGULATORY_COMMISSION/BANK_BRANCHES"
 
 # CREATE LIST CALL
-nb_calls = [int(i) for i in list(np.arange(0, 227270, 10))]
+nb_calls = [int(i) for i in list(np.arange(0, 31721, 10))] # 31721 for exit and 227270 for all
 # SEND TO S3 -> to trigger Lambda
-
+nb_calls[:3]
 
 def chunks(lst, n):
     """Yield successive n-sized chunks from lst."""
@@ -53,7 +53,7 @@ list_calls = list(chunks(nb_calls, 100))
 len(list_calls)
 PATH_S3_TRIGGER = "DATA/ECON/CHINA/CHINA_BANKING_AND_INSURANCE_REGULATORY_COMMISSION/BANK_BRANCHES/TRIGGER_LIST"
 j = 0
-for i in tqdm(list_calls):
+for i in tqdm(list_calls[1:]):
     json_data = {
         'range': i
     }
@@ -69,6 +69,12 @@ for i in tqdm(list_calls):
 
 #j = 228
 start_time = time.time()
+list_s3 = s3.list_all_files_with_prefix(
+    prefix=os.path.join(PATH_S3, 'RAW_JSON_EXIT'))
+differences = list(set(nb_calls) -
+                   set([int(re.findall(r'\d+', i.split("/")[-1])[0])
+                        for i in list_s3])
+                   )
 while len(differences) > 0:
     list_calls = list(chunks(differences, 100))
     for i in tqdm(list_calls):
@@ -85,7 +91,7 @@ while len(differences) > 0:
         j += 1
     # check missing
     list_s3 = s3.list_all_files_with_prefix(
-        prefix=os.path.join(PATH_S3, 'RAW_JSON'))
+        prefix=os.path.join(PATH_S3, 'RAW_JSON_EXIT'))
     differences = list(set(nb_calls) -
                        set([int(re.findall(r'\d+', i.split("/")[-1])[0])
                             for i in list_s3])
@@ -95,10 +101,11 @@ end_time = time.time() - start_time
 print(end_time / 3600)
 
 # read files
+#### Choose  RAW_JSON for whole data and RAW_JSON_EXIT for exit
 warnings.filterwarnings("ignore")
 client_ = boto3.resource('s3')
 list_s3 = s3.list_all_files_with_prefix(
-    prefix=os.path.join(PATH_S3, 'RAW_JSON'))
+    prefix=os.path.join(PATH_S3, 'RAW_JSON_EXIT'))
 
 
 def convert_to_df(key):
@@ -110,8 +117,10 @@ def convert_to_df(key):
 
 
 # append to df -> bit slow: about 200k files -> we could have done it with Athena
+
 df = pd.concat(map(convert_to_df, list_s3))
 df.shape
+
 df.to_csv('list_firms.csv', index=False)
 ################################################################################
 ################################################################################
@@ -134,7 +143,7 @@ df_cities = s3.run_query(
 )
 
 regex = "北京|天津|石家庄|唐山|秦皇岛|邯郸|邢台|保定|张家口|承德|沧州|廊坊|衡水|太原|大同|阳泉|长治|晋城|朔州|晋中|运城|忻州|临汾|吕梁|呼和浩特|包头|乌海|赤峰|通辽|鄂尔多斯|呼伦贝尔|巴彦淖尔|乌兰察布|沈阳|大连|鞍山|抚顺|本溪|丹东|锦州|营口|阜新|辽阳|盘锦|铁岭|朝阳|葫芦岛|长春|吉林|四平|辽源|通化|白山|松原|白城|哈尔滨|齐齐哈尔|鸡西|鹤岗|双鸭山|大庆|伊春|佳木斯|七台河|牡丹江|黑河|绥化|上海|南京|无锡|徐州|常州|苏州|南通|连云港|淮安|盐城|扬州|镇江|泰州|宿迁|杭州|宁波|温州|嘉兴|湖州|绍兴|金华|衢州|舟山|台州|丽水|合肥|芜湖|蚌埠|淮南|马鞍山|淮北|铜陵|安庆|黄山|滁州|阜阳|宿州|巢湖市|六安|亳州|池州|宣城|福州|厦门|莆田|三明|泉州|漳州|南平|龙岩|宁德|南昌|景德镇|萍乡|九江|新余|鹰潭|赣州|吉安|宜春|抚州|上饶|济南|青岛|淄博|枣庄|东营|烟台|潍坊|济宁|泰安|威海|日照|莱芜|临沂|德州|聊城|滨州|菏泽|郑州|开封|洛阳|平顶山|安阳|鹤壁|新乡|焦作|濮阳|许昌|漯河|三门峡|南阳|商丘|信阳|周口|驻马店|武汉|黄石|十堰|宜昌|襄樊|鄂州|荆门|孝感|荆州|黄冈|咸宁|随州|长沙|株洲|湘潭|衡阳|邵阳|岳阳|常德|张家界|益阳|郴州|永州|怀化|娄底|广州|韶关|深圳|珠海|汕头|佛山|江门|湛江|茂名|肇庆|惠州|梅州|汕尾|河源|阳江|清远|东莞|中山|潮州|揭阳|云浮|南宁|柳州|桂林|梧州|北海|防城港|钦州|贵港|玉林|百色|贺州|河池|来宾|崇左|海口|三亚|重庆|成都|自贡|攀枝花|泸州|德阳|绵阳|广元|遂宁|内江|乐山|南充|眉山|宜宾|广安|达州|雅安|巴中|资阳|贵阳|六盘水|遵义|安顺|昆明|曲靖|玉溪|保山|昭通|丽江|思茅|临沧|西安|铜川|宝鸡|咸阳|渭南|延安|汉中|榆林|安康|商洛|兰州|嘉峪关|金昌|白银|天水|武威|张掖|平凉|酒泉|庆阳|定西|陇南|西宁|银川|石嘴山|吴忠|固原|中卫|乌鲁木齐|克拉玛依|beijing$|tianjin$|shijiazhuang$|tangshan$|qinhuangdao$|handan$|xingtai$|baoding$|zhangjiakou$|chengde$|cangzhou$|langfang$|hengshui$|taiyuan$|datong$|yangquan$|changzhi$|jincheng$|shuozhou$|jinzhong$|yuncheng$|xinzhou$|linfen$|luliang$|hohhot$|baotou$|wuhai$|chifeng$|tongliao$|erdos$|hulunbeier$|bayannaoer$|wulanchabu$|shenyang$|dalian$|anshan$|fushun$|benxi$|dandong$|jinzhou$|yingkou$|fuxin$|liaoyang$|panjin$|tieling$|chaoyang$|huludao$|changchun$|jilin$|siping$|liaoyuan$|tonghua$|hakusan$|matsubara$|baicheng$|harbin$|qiqihar$|jixi$|hegang$|shuangyashan$|daqing$|yī chūn$|jiamusi$|qitaihe$|mudanjiang$|heihe$|suihua$|shanghai$|nanjing$|wuxi$|xuzhou$|changzhou$|sūzhōu$|nantong$|lianyungang$|huaian$|yancheng$|yangzhou$|zhenjiang$|tàizhōu$|suqian$|hangzhou$|ningbo$|wenzhou$|jiaxing$|huzhou$|shaoxing$|jinhua$|quzhou$|zhoushan$|táizhōu$|lishui$|hefei$|wuhu$|bengbu$|huainan$|ma'anshan$|huaibei$|tongling$|anqing$|huangshan$|chuzhou$|fuyang$|sùzhōu$|chaohu$|lu'an$|bozhou$|chizhou$|xuancheng$|fúzhōu$|xiamen$|putian$|sanming$|quanzhou$|zhangzhou$|nanping$|longyan$|ningde$|nanchang$|jingdezhen$|pingxiang$|jiujiang$|xinyu$|yingtan$|ganzhou$|ji'an$|yíchūn$|fǔzhōu$|shangrao$|jinan$|qingdao$|zibo$|zaozhuang$|dongying$|yantai$|weifang$|jining$|tai'an$|weihai$|rizhao$|laiwu$|linyi$|dezhou$|liaocheng$|binzhou$|heze$|zhengzhou$|kaifeng$|luoyang$|pingdingshan$|anyang$|hebi$|xinxiang$|jiaozuo$|puyang$|xuchang$|luohe$|sanmenxia$|nanyang$|shangqiu$|xinyang$|zhoukou$|zhumadian$|wuhan$|huangyou$|shiyan$|yichang$|xiangfan$|ezhou$|jingmen$|xiaogan$|jingzhou$|huanggang$|xianning$|suizhou$|changsha$|zhuzhou$|xiangtan$|hengyang$|shaoyang$|yueyang$|changde$|zhangjiajie$|yiyang$|chenzhou$|yongzhou$|huaihua$|loudi$|canton$|shaoguan$|shenzhen$|zhuhai$|shantou$|foshan$|jiangmen$|zhanjiang$|maoming$|zhaoqing$|huizhou$|meizhou$|shanwei$|heyuan$|yangjiang$|qingyuan$|dongguan$|zhongshan$|chaozhou$|jieyang$|yunfu$|nanning$|liuzhou$|guilin$|wuzhou$|beihai$|fangchenggang$|qinzhou$|guigang$|yùlín$|baise$|hezhou$|hechi$|laibin$|chongzuo$|haikou$|sanya$|chongqing$|chengdu$|zigong$|panzhihua$|luzhou$|deyang$|mianyang$|guangyuan$|suining$|neijiang$|leshan$|nanchong$|meishan$|yibin$|guangan$|dazhou$|ya'an$|bazhong$|ziyang$|guiyang$|liupanshui$|zunyi$|anshun$|kunming$|qujing$|yuxi$|baoshan$|zhaotong$|lijiang$|simao$|lincang$|xi'an$|tongchuan$|baoji$|xianyang$|weinan$|yan'an$|hanzhong$|yúlín$|ankang$|shangluo$|lanzhou$|jiayuguan$|jinchang$|baiyin$|tianshui$|wuwei$|zhangye$|pingliang$|jiuquan$|qingyang$|dingxi$|longnan$|xining$|yinchuan$|shizuishan$|wuzhong$|guyuan$|zhongwei$|urumqi$|karamay$"
-
+df_cities.head()
 
 def find_city(x):
     match = " ".join(re.findall(regex, str(x)))
@@ -161,15 +170,15 @@ test = (
 )
 
 empty_city = pd.concat(
-    [test.loc[lambda x: x['city'].isin([None])], (
+    [test.loc[lambda x: ~x['city'].isin([None])], (
         test
-        .loc[lambda x:  x['city'].isin([None])]
+        .loc[lambda x:  ~x['city'].isin([None])]
         .assign(count=lambda x:x.apply(lambda x: len(x['city'].split(" ")), axis=1))
         .loc[lambda x: x['count'] > 1]
         .drop(columns=['count'])
     )])
 
-
+empty_city.shape
 list_calls = list(chunks(list(empty_city['id']), 100))
 len(list_calls)
 j = 0
@@ -225,7 +234,7 @@ temp = (
 
 list_candidates = list(dict.fromkeys(temp['clean_query'].to_list()))
 len(list_candidates)
-
+list_candidates[:3]
 
 def get_fuzzywuzzy(x):
 
@@ -327,9 +336,12 @@ x['location'].replace(',', "|"), axis =1))
 )
 )
 ####
-#df_city_branches_final_geo = (pd.read_csv("df_city_branches_final_geo.csv",
-#dtype = {'id':'str','geocode4_corr':'str', 'lostReason':'str',
-#'location':'str', 'city_temp':'str', 'points':'str'}))
+df_city_branches_final_geo = (pd.read_csv("df_city_branches_final_geo.csv",
+dtype = {'id':'str','geocode4_corr':'str', 'lostReason':'str',
+'location':'str', 'city_temp':'str', 'points':'str'}), parse_dates = [''])
+
+df_city_branches_final_geo.head()
+
 df_city_branches_final_geo.to_csv("df_city_branches_final_geo.csv", index=False)
 # SAVE S3
 s3.upload_file("df_city_branches_final_geo.csv",

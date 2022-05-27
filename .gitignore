@@ -159,3 +159,4 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+01_data_preprocessing/00_download_data/CHINA_BANKING_BRANCH/lambda_branches/bank_branches.py
