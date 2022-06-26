@@ -72,6 +72,7 @@ Add tfp?
 
 ```sos kernel="SoS"
 from awsPy.aws_authorization import aws_connector
+from matplotlib import cm
 from awsPy.aws_s3 import service_s3
 from awsPy.aws_glue import service_glue
 from pathlib import Path
@@ -82,6 +83,7 @@ import matplotlib.pyplot as plt
 import os, shutil, json
 import sys
 import re
+import janitor
 path = os.getcwd()
 parent_path = str(Path(path).parent.parent.parent)
 
@@ -171,8 +173,8 @@ WITH aggregate_pol AS (
     year, 
     province_en,
     geocode4_corr, 
-    indus_code as cic,
-    --ind2, 
+    --indus_code as cic,
+    ind2, 
     --SUM(ttoutput) as output,
     SUM(tso2) as tso2, 
     SUM(twaste_water) as twaste_water, 
@@ -199,8 +201,8 @@ WITH aggregate_pol AS (
         citycode, 
         province_en,
         geocode4_corr, 
-        -- ind2, 
-        indus_code,
+        ind2, 
+        --indus_code,
         --ttoutput,
         tso2, 
         twaste_water, 
@@ -239,8 +241,8 @@ WITH aggregate_pol AS (
     year, 
     province_en,
     geocode4_corr, 
-    -- ind2
-    indus_code
+    ind2
+    --indus_code
 ) 
 SELECT *
 FROM aggregate_pol
@@ -341,27 +343,29 @@ query = """
 SELECT 
       year, 
       geocode4_corr, 
-      cic,
-      --indu_2,
+      --cic,
+      indu_2,
       SUM(output) AS output,
       SUM(employ) AS employment, 
       SUM(captal) AS capital,
-      SUM(sales) as sales
+      SUM(sales) as sales,
+      AVG(c125) as interest_rate
 FROM(
 SELECT 
   firm, 
   year, 
   geocode4_corr, 
-  cic,
- -- CASE WHEN LENGTH(cic) = 4 THEN substr(cic, 1, 2) ELSE concat(
- --   '0', 
- --   substr(cic, 1, 1)
- -- ) END AS indu_2, 
+  --cic,
+ CASE WHEN LENGTH(cic) = 4 THEN substr(cic, 1, 2) ELSE concat(
+    '0', 
+    substr(cic, 1, 1)
+  ) END AS indu_2, 
   output, 
   employ, 
   captal, 
   sales, 
-  toasset 
+  toasset,
+  c125
 FROM 
   firms_survey.asif_firms_prepared 
   INNER JOIN (
@@ -384,8 +388,8 @@ FROM
     GROUP BY 
     year, 
       geocode4_corr, 
-      cic
-      --indu_2
+      --cic
+      indu_2
 """
 df_asif = (s3.run_query(
             query=query,
@@ -408,11 +412,11 @@ query= """
 WITH test AS (
   SELECT 
     *, 
-    --cic,
-    -- CASE WHEN LENGTH(cic) = 4 THEN substr(cic, 1, 2) ELSE concat(
-    --  '0', 
-    --  substr(cic, 1, 1)
-    --) END AS indu_2, 
+    cic,
+     CASE WHEN LENGTH(cic) = 4 THEN substr(cic, 1, 2) ELSE concat(
+      '0', 
+      substr(cic, 1, 1)
+    ) END AS indu_2, 
     c80 + c81 + c82 + c79 as current_asset, 
     c91 + c92 AS intangible, 
     tofixed - cudepre  AS tangible, 
@@ -471,8 +475,8 @@ FROM
     WITH ratio AS (
       SELECT 
         year, 
-         cic, 
-        -- indu_2, 
+        -- cic, 
+        indu_2, 
         geocode4_corr, 
         province_en, 
         CAST(
@@ -532,15 +536,15 @@ FROM
       GROUP BY 
         province_en, 
         geocode4_corr, 
-        cic,
-        -- indu_2, 
+        --cic,
+        indu_2, 
         year 
       
     ) 
     SELECT 
       year, 
-      cic,
-      -- indu_2 as ind2, 
+      --cic,
+      indu_2 as ind2, 
       geocode4_corr, 
       tangible, 
       total_asset,
@@ -601,8 +605,7 @@ df_tcz.dtypes
 ```sos kernel="SoS"
 query = """
 SELECT 
-      --cic as ind2,
-      cic,
+      cic as ind2,
       financial_dep_china AS credit_constraint--,
       --financial_dep_us,
       --liquidity_need_us,
@@ -629,8 +632,8 @@ df_credit_constraint.head()
 ```sos kernel="SoS"
 query = """
 WITH temp AS (
-SELECT year, no_dup_citycode.geocode4_corr, indus_code as cic, 
--- substr(indus_code, 1,2) as ind2,
+SELECT year, no_dup_citycode.geocode4_corr,-- indus_code as cic, 
+substr(indus_code, 1,2) as ind2,
 innovation_index
 FROM innovation_city_industry
 INNER JOIN (
@@ -645,13 +648,14 @@ INNER JOIN (
   ) as no_dup_citycode ON innovation_city_industry.geocode4_corr = no_dup_citycode.extra_code
   )
   SELECT year, geocode4_corr, 
-  --ind2,
-  cic,
-  AVG(innovation_index) as innovation_index
+  ind2,
+  --cic,
+  approx_percentile(innovation_index, ARRAY[0.50])[1] as innovation_index
+  -- SUM(innovation_index) as innovation_index
   FROM temp
   GROUP BY year, geocode4_corr,
-  cic
-  --, ind2
+  --cic
+  ind2
 """
 df_innovation = (s3.run_query(
             query=query,
@@ -720,8 +724,8 @@ def get_type(x):
                 "policy bank")
     elif re.search(r"股份制商业银行", str(x)):
         return (re.search(r"股份制商业银行|银行股份", str(x)).group(), "joint-stock commercial bank")
-    elif re.search(r"城市商业银行", str(x)):
-        return (re.search(r"城市商业银行", str(x)).group(), "city commercial bank")
+    #elif re.search(r"城市商业银行", str(x)):
+    #    return (re.search(r"城市商业银行", str(x)).group(), "city commercial bank")
     elif re.search(r"农村商业银行", str(x)):
         return (re.search(r"农村商业银行", str(x)).group(), "rural commercial bank")
     elif re.search(r"外资银行", str(x)):
@@ -774,13 +778,156 @@ df_bank = (
     )
     .assign(
         bank_type_1 = lambda x: x['certcode'].str.slice(stop = 1),
-        bank_code = lambda x: x['certcode'].str.slice(stop = 5),
+        bank_code = lambda x: x['certcode'].str.slice(stop = 7),
         bank_type_details = lambda x: x['certcode'].str.slice(start = 5, stop = 6),
         citycode = lambda x: x['certcode'].str.slice(start = 7, stop = 11),
         unknown_code = lambda x: x['certcode'].str.slice(start = 11),
     )
     .drop(columns=["bank_temp"])
 )
+```
+
+```sos kernel="SoS"
+df_bank.loc[lambda x: ~x['geocode4_corr'].isin(["<NA>"])].shape[0]/df_bank.shape[0]
+```
+
+```sos kernel="SoS"
+df_bank.shape
+```
+
+```sos kernel="SoS"
+import seaborn as sns
+sns.set_style("whitegrid",rc={'figure.figsize':(15,10)})
+```
+
+<!-- #region kernel="SoS" -->
+We already know the status of 75% of our dataset.
+<!-- #endregion -->
+
+```sos kernel="SoS"
+df_bank['bank_type_adj'].dropna().shape[0]/df_bank.shape[0]
+```
+
+<!-- #region kernel="SoS" -->
+It seems we can derive some information from the certcode:
+
+- bank type: first digit
+- bank code: first 5 digits
+- bank type details: 5 and 6th digits
+- city code: 7 to 11th digits
+- unknown: last digits starting at the 11th position
+<!-- #endregion -->
+
+<!-- #region kernel="SoS" -->
+It seems "S" is the branch
+
+Below is an example of knowk bank type
+<!-- #endregion -->
+
+```sos kernel="SoS"
+(
+    df_bank
+    .loc[lambda x: ~x['bank_type_adj'].isin([np.nan])]
+    .loc[lambda x: ~x['geocode4_corr'].isin(["<NA>"])]
+    .loc[lambda x: x['bank_type_1'].isin(['B'])]#['bank_type'].value_counts()
+    .reindex(columns = ['id', 'flowno', 'certcode', 'fullname','citycode','geocode4_corr',
+                       'bank_type_adj', 'bank_type_1','bank_type', 'bank_code', 'bank_type_details','test2','year_setdate',
+       'registration_type', 'bank_full_name', 'list_bank_type'])
+    [['bank_type_details','bank_type_adj']].value_counts()
+)
+```
+
+```sos kernel="SoS"
+(
+    df_bank
+    .loc[lambda x: ~x['bank_type_adj'].isin([np.nan])]
+    .loc[lambda x: ~x['geocode4_corr'].isin(["<NA>"])]
+    .loc[lambda x: x['bank_type_1'].isin(['B'])]#['bank_type'].value_counts()
+    .reindex(columns = ['id', 'flowno', 'certcode', 'fullname','citycode','geocode4_corr',
+                       'bank_type_adj', 'bank_type_1','bank_type', 'bank_code', 'bank_type_details','test2','year_setdate',
+       'registration_type', 'bank_full_name', 'list_bank_type'])
+    .loc[lambda x: x['bank_type_details'].isin(['S', 'A', 'U'])]
+    .groupby(['bank_type_details'])
+    .agg({'fullname':'unique'})
+)
+```
+
+<!-- #region kernel="SoS" -->
+Below is an example of unknown bank type(
+    df_bank
+    .loc[lambda x: x['bank_type_adj'].isin([np.nan])]
+    .loc[lambda x: ~x['geocode4_corr'].isin(["<NA>"])]
+    .loc[lambda x: x['bank_type_1'].isin(['B'])]
+<!-- #endregion -->
+
+```sos kernel="SoS"
+(
+    df_bank
+    .loc[lambda x: x['bank_type_adj'].isin([np.nan])]
+    .loc[lambda x: ~x['geocode4_corr'].isin(["<NA>"])]
+    .loc[lambda x: x['bank_type_1'].isin(['B'])]
+    ['bank_type_details'].value_counts()
+)
+```
+
+```sos kernel="SoS"
+(
+    df_bank
+    .loc[lambda x: x['bank_type_adj'].isin([np.nan])]
+    .loc[lambda x: ~x['geocode4_corr'].isin(["<NA>"])]
+    .loc[lambda x: x['bank_type_1'].isin(['B'])]#['bank_type'].value_counts()
+    .reindex(columns = ['id', 'flowno', 'certcode', 'fullname','citycode','geocode4_corr',
+                       'bank_type_adj', 'bank_type_1','bank_type', 'bank_code', 'bank_type_details','test2','year_setdate',
+       'registration_type', 'bank_full_name', 'list_bank_type'])
+    .loc[lambda x: x['bank_type_details'].isin(['S', 'B','L', 'U'])]
+    .groupby(['bank_type_details'])
+    .agg({'fullname':'unique'})
+)
+```
+
+<!-- #region kernel="SoS" -->
+Rule:
+
+- If `bank_type_adj` is known, then keep "S"
+- If `bank_type_adj` is unknown, then keep "S" and assume it is a city commercial bank & bank type equals to B
+
+For instance, we [know](http://www.asianbanks.net/HTML/Links/china-city-commercial-rural%20banks.htm) that 长沙银行 is a city commercial bank. 
+
+If we check in the database, we can see the bank has different types (S, X, B, L, H, G). The difference is subtile
+<!-- #endregion -->
+
+```sos kernel="SoS"
+(
+    df_bank
+    .loc[lambda x: x['bank_type_adj'].isin([np.nan])]
+    .loc[lambda x: x['fullname'].str.contains('长沙银行')]
+    .reindex(columns = ['id', 'flowno', 'certcode', 'fullname','citycode','geocode4_corr',
+                       'bank_type_adj', 'bank_type_1','bank_type', 'bank_code', 'bank_type_details','test2','year_setdate',
+       'registration_type', 'bank_full_name', 'list_bank_type'])
+    [['bank_type_1','bank_type_details']].value_counts()
+)
+```
+
+```sos kernel="SoS"
+(
+    df_bank
+    .loc[lambda x: x['bank_type_adj'].isin([np.nan])]
+    .loc[lambda x: x['fullname'].str.contains('长沙银行')]
+    .reindex(columns = ['id', 'flowno', 'certcode', 'fullname','citycode','geocode4_corr',
+                       'bank_type_adj', 'bank_type_1','bank_type', 'bank_code', 'bank_type_details','test2','year_setdate',
+       'registration_type', 'bank_full_name', 'list_bank_type'])
+    .loc[lambda x: x['bank_type_details'].isin(["S",'X', 'B', 'L', 'H', 'G'])]
+    .drop_duplicates(subset = ['bank_type_details'])
+)
+```
+
+<!-- #region kernel="SoS" -->
+Let's reconstruct the data:
+
+Use city code instead of geocode
+<!-- #endregion -->
+
+```sos kernel="SoS"
 query = """
 SELECT *
 FROM china.china_bank_information
@@ -816,439 +963,435 @@ df_bank_info.shape
 ```
 
 ```sos kernel="SoS"
-df_bank.loc[lambda x: ~x['geocode4_corr'].isin(["<NA>"])].shape[0]/df_bank.shape[0]
+df_bank_info.loc[lambda x: x['registeraddress'].str.contains('北京')].loc[lambda x: x['bnature'].isin(['城市商业银行'])]
 ```
 
 ```sos kernel="SoS"
-df_bank_info.head(2)
-```
-
-```sos kernel="SoS"
-df_bank.head(2)
-```
-
-```sos kernel="SoS"
-df_bank['registration_type'].value_counts()
-```
-
-```sos kernel="SoS"
-df_bank['bank_type'].value_counts()
-```
-
-```sos kernel="SoS"
-df_bank['bank_type_adj'].value_counts()
-```
-
-```sos kernel="SoS"
-(
-    df_bank
-    .loc[lambda x: x['setdate'] < "2022"]
-    .set_index(['setdate'])
-    .groupby([pd.Grouper(freq='Y')])
-    .agg({"id":"nunique"})
-    .assign(cumsum = lambda x: x['id'].cumsum())
-    .drop(columns = ['id'])
-    .plot
-    .line(title = 'total branches over time',figsize=(8,8))
-    .legend(loc='center left',bbox_to_anchor=(1.0, 0.5))
+#### no city bank
+df_bank_concat = (
+    pd.concat(
+    [
+        (
+            df_bank.loc[lambda x: ~x["bank_type_adj"].isin([np.nan])]
+            .loc[lambda x: x["bank_type_details"].isin(["S"])]
+            .reindex(
+                columns=[
+                    "id",
+                    "certcode",
+                    "bank_type_adj",
+                    "bank_type_1",
+                    "bank_type",
+                    "bank_type_details",
+                    "unknown_code",
+                    "fullname",
+                    "registration_type",
+                    "bank_full_name",
+                    "citycode",
+                    "bank_code",
+                    "year_setdate",
+                ]
+            )
+            .assign(status="no CCB",)
+        ),
+        ### rural
+        (
+            df_bank.loc[lambda x: x["bank_type_adj"].isin([np.nan])]
+            .loc[lambda x: x["bank_type_details"].isin(["S"])]
+            .loc[lambda x: x['fullname'].str.contains('村镇')]
+            .assign(bank_type="农村商业银行", status="no CCB")
+            .reindex(
+                columns=[
+                    "id",
+                    "certcode",
+                    "bank_type_adj",
+                    "bank_type_1",
+                    "bank_type",
+                    "bank_type_details",
+                    "unknown_code",
+                    "fullname",
+                    "registration_type",
+                    "bank_full_name",
+                    "citycode",
+                    "geocode4_corr",
+                    "bank_code",
+                    "year_setdate",
+                    "status",
+                ]
+            )
+        )
+    ]
 )
-plt.show()
-```
-
-```sos kernel="SoS"
-(
-    df_bank
-    .loc[lambda x: x['setdate'] < "2022"]
-    .set_index(['setdate'])
-    .groupby([pd.Grouper(freq='Y')])
-    .agg({"id":"nunique"})
-    #.assign(cumsum = lambda x: x['id'].cumsum())
-    #.drop(columns = ['id'])
-    .plot
-    .line(title = 'Accumulation branches over time',figsize=(8,8))
-    .legend(loc='center left',bbox_to_anchor=(1.0, 0.5))   
+    .rename(
+    columns = {
+        #'citycode':'geocode4_corr',
+        'year_setdate':'year'
+    })
 )
-plt.show()
+```
+
+<!-- #region kernel="SoS" -->
+For the CCB, we need to process them independently using the CSMAR dataset. The dataset inform us of the city banks -> about 173 banks. 
+<!-- #endregion -->
+
+```sos kernel="SoS"
+df_bank_info.loc[lambda x: x['bnature'].isin(['城市商业银行'])].head()
 ```
 
 ```sos kernel="SoS"
-df_bank.shape
+### CCB
+temp_city_branch = (
+    df_bank.loc[lambda x: x["bank_type_adj"].isin([np.nan])]
+    .loc[lambda x: x["bank_type_details"].isin(["S"])]
+    .loc[lambda x: x["bank_type_1"].isin(["B", "L"])]
+    .loc[lambda x: ~x["fullname"].str.contains("村镇")]
+    .assign(bank_type="城市商业银行", status="CCB")
+    .reindex(
+        columns=[
+            "id",
+            "certcode",
+            "bank_type_adj",
+            "bank_type_1",
+            "bank_type",
+            "bank_type_details",
+            "unknown_code",
+            "fullname",
+            "registration_type",
+            "bank_full_name",
+            "citycode",
+            'geocode4_corr',
+            "bank_code",
+            "year_setdate",
+            "status",
+        ]
+    )
+    .rename(columns={
+        #"citycode": "geocode4_corr",
+        "year_setdate": "year"})
+)
 ```
 
 ```sos kernel="SoS"
-from polyfuzz import PolyFuzz
+df_bank_info['shortbnm'].nunique()
+```
+
+<!-- #region kernel="SoS" -->
+We can adjust the bank name using the CSMAR datasetfrom polyfuzz.models import RapidFuzz
+rapidfuzz_matcher = RapidFuzz(n_jobs=1)
+<!-- #endregion -->
+
+```sos kernel="SoS"
 from polyfuzz.models import RapidFuzz
-from polyfuzz.models import Embeddings
-from flair.embeddings import TransformerWordEmbeddings
-import seaborn as sns
-sns.set_style("whitegrid",rc={'figure.figsize':(15,10)})
+from polyfuzz import PolyFuzz
+rapidfuzz_matcher = RapidFuzz(n_jobs=1)
 ```
 
 <!-- #region kernel="SoS" -->
-We already know the status of 75% of our dataset. The remaining banks are mostly city banks, so we well use fuzzy string matching to find them from the CSMAR dataset
+Clean no CCB
 <!-- #endregion -->
 
 ```sos kernel="SoS"
-df_bank['bank_type_adj'].dropna().shape[0]/df_bank.shape[0]
+banks_no_ccb = (
+    [ i.replace('（中国）','').strip() for i in 
+     (
+    df_bank_concat['bank_full_name'].dropna().drop_duplicates().to_list()
+)
+     if len(i) > 1]
+)
+bank_info = df_bank_info.loc[lambda x: ~x['bnature'].isin(['城市商业银行'])]['shortbnm'].to_list()
+no_ccb = PolyFuzz(rapidfuzz_matcher).match(banks_no_ccb, bank_info)
+```
+
+```sos kernel="SoS"
+len(no_ccb.get_matches().sort_values(by = ['Similarity']).loc[lambda x: x["Similarity"] > 0.80]['From'].to_list())
 ```
 
 <!-- #region kernel="SoS" -->
-It seems we can derive some information from the certcode:
-
-- bank type: first digit
-- bank code: first 5 digits
-- bank type details: 5 and 6th digits
-- city code: 7 to 11th digits
-- unknown: last digits starting at the 11th position
+CCB
 <!-- #endregion -->
-
-```sos kernel="SoS"
-(
-    df_bank
-    .loc[lambda x: ~x['bank_type_adj'].isin([np.nan])]
-    .loc[lambda x: ~x['geocode4_corr'].isin(["<NA>"])]
-    .loc[lambda x: x['bank_type_1'].isin(['B'])]#['bank_type'].value_counts()
-    .reindex(columns = ['id', 'flowno', 'certcode', 'fullname','citycode','geocode4_corr',
-                       'bank_type_adj', 'bank_type_1','bank_type', 'bank_code', 'bank_type_details','test2','year_setdate',
-       'registration_type', 'bank_full_name', 'list_bank_type'])
-    [['bank_type_details','bank_type_1']].value_counts()
-    #.groupby(['bank_x'])
-    #.agg({'fullname':'unique'})
-)
-```
-
-<!-- #region kernel="SoS" -->
-It seems "S" is the branch
-<!-- #endregion -->
-
-```sos kernel="SoS"
-(
-    df_bank
-    .loc[lambda x: ~x['bank_type_adj'].isin([np.nan])]
-    .loc[lambda x: ~x['geocode4_corr'].isin(["<NA>"])]
-    .loc[lambda x: x['bank_type_1'].isin(['B'])]#['bank_type'].value_counts()
-    .reindex(columns = ['id', 'flowno', 'certcode', 'fullname','citycode','geocode4_corr',
-                       'bank_type_adj', 'bank_type_1','bank_type', 'bank_code', 'bank_type_details','test2','year_setdate',
-       'registration_type', 'bank_full_name', 'list_bank_type'])
-    .loc[lambda x: x['bank_type_details'].isin(['S', 'A', 'U'])]
-    .groupby(['bank_type_details'])
-    .agg({'fullname':'unique'})
-)
-```
-
-```sos kernel="SoS"
-(
-    df_bank
-    .loc[lambda x: x['bank_type_adj'].isin([np.nan])]
-    .loc[lambda x: ~x['geocode4_corr'].isin(["<NA>"])]
-    .reindex(columns = ['id', 'flowno', 'certcode', 'fullname','citycode','geocode4_corr','adress',
-                       'bank_type_adj', 'bank_type_1','bank_type', 'bank_code', 'bank_type_details','test2','year_setdate',
-       'registration_type', 'bank_full_name', 'list_bank_type'])
-    .head()
-)
-```
-
-```sos kernel="SoS"
-(
-    df_bank
-    [['bank_type_details']].value_counts()
-)
-```
-
-```sos kernel="SoS"
-(
-    df_bank
-    .loc[lambda x: x['bank_type_adj'].isin([np.nan])]
-    .loc[lambda x: ~x['geocode4_corr'].isin(["<NA>"])]
-    .loc[lambda x: x['bank_type_1'].isin(['B'])]#['bank_type'].value_counts()
-    .reindex(columns = ['id', 'flowno', 'certcode', 'fullname','citycode','geocode4_corr',
-                       'bank_type_adj', 'bank_type_1','bank_type', 'bank_code', 'bank_type_details','test2','year_setdate',
-       'registration_type', 'bank_full_name', 'list_bank_type'])
-    .loc[lambda x: x['bank_type_details'].isin(['S', 'A', 'U'])]
-    .groupby(['bank_type_details'])
-    .agg({'fullname':'unique'})
-)
-```
 
 ```sos kernel="SoS"
 banks = (
     [ i.replace('（中国）','').strip() for i in 
-     df_bank.loc[lambda x: x['bank_type_adj'].isin([np.nan])]['bank_full_name'].dropna().drop_duplicates().to_list()
+     (
+    temp_city_branch['bank_full_name'].dropna().drop_duplicates().to_list()
+)
      if len(i) > 1]
 )
-bank_info = df_bank_info['shortbnm'].to_list()
-len(bank_info)
-```
-
-```sos kernel="SoS"
-len(banks)
-```
-
-```sos kernel="SoS"
-banks[:5]
+bank_info = df_bank_info.loc[lambda x: x['bnature'].isin(['城市商业银行'])]['shortbnm'].to_list()
+model = PolyFuzz(rapidfuzz_matcher).match(banks, bank_info)
 ```
 
 <!-- #region kernel="SoS" -->
-Let's make sure the city (or at least the location) is in the name; We can use this transformers https://huggingface.co/Davlan/xlm-roberta-base-wikiann-ner?text=%E6%9C%9D%E9%98%B3%E5%B8%82%E5%8F%8C%E5%A1%94%E5%8C%BA%E5%86%9C%E6%9D%91
+Among the 183 banks, we found 113 with a strong similarity
 <!-- #endregion -->
 
 ```sos kernel="SoS"
-from transformers import AutoTokenizer, AutoModelForTokenClassification
-from transformers import pipeline
-tokenizer = AutoTokenizer.from_pretrained("Davlan/xlm-roberta-base-wikiann-ner")
-
-model = AutoModelForTokenClassification.from_pretrained("Davlan/xlm-roberta-base-wikiann-ner")
-```
-
-```sos kernel="SoS"
-def get_proba_city(x):
-    ner = pipeline("ner", tokenizer=tokenizer,model=model,aggregation_strategy='simple')
-    ner_results = ner(x)
-    if len([i for i in ner_results if i['entity_group'] == 'LOC']) >0:
-        dic = max(
-            [i for i in ner_results if i['entity_group'] == 'LOC'],
-            key=lambda x:x['score']
-        )
-        dic['name'] = x
-        dic['applicable'] = True
-    else:
-        dic =  max(ner_results, key=lambda x:x['score'])
-        dic['name'] = x
-        dic['applicable'] = False
-    return dic
-```
-
-```sos kernel="SoS"
-from tqdm import tqdm
-```
-
-```sos kernel="SoS"
-regex_loc = '|'.join(df_bank_info['cityname'].drop_duplicates().to_list()) + \
-'|'+'|'.join(df_bank_info['provincename'].drop_duplicates().to_list()) + \
-'|'+ '|'.join([i.replace('市',"").replace("省",'').replace('自治区',"")
- for i in df_bank_info['provincename'].drop_duplicates().to_list()]) + \
-'|'+ '|'.join([i.replace('市',"").replace("省",'').replace('自治区',"")
- for i in df_bank_info['cityname'].drop_duplicates().to_list()])
-```
-
-```sos kernel="SoS"
-true_loc = [i for i in banks if re.search(regex_loc,i)]
-```
-
-```sos kernel="SoS"
-df_branch_to_check = pd.DataFrame([get_proba_city(i) for i in tqdm(banks) if i not in true_loc])
-```
-
-```sos kernel="SoS"
-df_branch_to_check.shape
-```
-
-```sos kernel="SoS"
-(
-    df_branch_to_check
-    .groupby(['applicable'])
-    .agg({'name':'unique'})
-)
+len(model.get_matches().sort_values(by = ['Similarity']).loc[lambda x: x["Similarity"] > 0.80]['From'].to_list())
 ```
 
 <!-- #region kernel="SoS" -->
-we can remove the branches which are not location, which mean we need to find 1937 differents banks
+we can concatenate the results
 <!-- #endregion -->
 
 ```sos kernel="SoS"
-banks_to_find = sorted(true_loc + df_branch_to_check.loc[lambda x: x['applicable'].isin([True])]['name'].to_list())
-```
-
-```sos kernel="SoS"
-banks_to_find[:10]
-```
-
-```sos kernel="SoS"
-to_find = False
-if to_find:
-    bert = TransformerWordEmbeddings('bert-base-multilingual-cased')
-    bert_matcher = Embeddings(bert, min_similarity=0)
-    models = PolyFuzz(bert_matcher).match(banks_to_find, bank_info)
-    models.get_matches().to_csv('branch_matches.csv', index = False)
-```
-
-```sos kernel="SoS"
-#bank_info
-```
-
-```sos kernel="SoS"
-from polyfuzz.models import RapidFuzz
-rapidfuzz_matcher = RapidFuzz(n_jobs=1)
-model = PolyFuzz(rapidfuzz_matcher).match(banks_to_find, bank_info)
-```
-
-```sos kernel="SoS"
-(
-    model.get_matches()
-    .sort_values(by = ['Similarity'])
-    .loc[lambda x: x["Similarity"] > 0.85]
-)
-```
-
-```sos kernel="SoS"
-(
-    pd.read_csv(
-        "branch_matches.csv",
-        dtype={
-            "id": "str",
-            "geocode4_corr": "str",
-            "lostReason": "str",
-            "location": "str",
-            "city_temp": "str",
-            "points": "str",
-        },
-    )
-    .sort_values(by=["Similarity"])
-    .loc[lambda x: x["Similarity"] > 0.85]
-)
-```
-
-```sos kernel="SoS"
-df_bank_branches = (
-    pd.read_csv(
-        "branch_matches.csv",
-        dtype={
-            "id": "str",
-            "geocode4_corr": "str",
-            "lostReason": "str",
-            "location": "str",
-            "city_temp": "str",
-            "points": "str",
-        },
-    )
-    .sort_values(by=["Similarity"])
-    .loc[lambda x: x["Similarity"] > 0.85]
-    .merge(
-        df_bank_info.reindex(columns=["bnm_cn", "shortbnm", "bnature"]).rename(
-            columns={"shortbnm": "To"}
+query = """
+SELECT 
+        extra_code, 
+        geocode4_corr, 
+        province_en 
+      FROM 
+        chinese_lookup.china_city_code_normalised
+"""
+df_citycode = (s3.run_query(
+            query=query,
+            database="china",
+            s3_output='SQL_OUTPUT_ATHENA',
+            filename=filename,  # Add filename to print dataframe
+            destination_key='SQL_OUTPUT_ATHENA/CSV',  #Use it temporarily
+            dtype = dtypes
         )
-    )
-    .replace(
-        {
-            "bnature": {
-                "政策性银行": "policy bank",
-                "国有控股大型商业银行": "sob",
-                "股份制商业银行": "joint-stock commercial bank",
-                "城市商业银行": "city commercial bank",
-                "农村商业银行": "rural commercial bank",
-                "外资银行": "foreign bank",
-                "其他": "other",
-                "农合行": "other",
-                "农信社": "other",
-                "三类新型农村金融机构": "other",
-            }
-        }
-    )
-    .rename(columns={"bnature": "bank_type_adj"})
-    .merge(
-        (
-            df_bank.drop_duplicates(subset=["bank_full_name"])
-            .reindex(
-                columns=[
-                    "id",
-                    "setdate",
-                    "year_setdate",
-                    "fullname",
-                    "bank_full_name",
-                    "registration_type",
-                    "city",
-                    "geocode4_corr",
-                    "bank_type",
-                    # "bank_type_adj",
-                ]
-            )
-            .assign(
-                bank_full_name_=lambda x: x["bank_full_name"]
-                .replace("（中国）", "")
-                .str.strip()
-            )
-            .rename(columns={"bank_full_name_": "From"})
-        )
-    )
-    .reindex(
-        columns=[
-            "id",
-            "setdate",
-            "year_setdate",
-            "fullname",
-            "bank_full_name",
-            "registration_type",
-            "city",
-            "geocode4_corr",
-            "bank_type",
-            "bank_type_adj",
+                )
+df_citycode.head()
+```
+
+```sos kernel="SoS"
+df_bank_status = (
+    pd.concat(
+        [
+            (
+                df_bank_concat.merge(
+                    no_ccb.get_matches()
+                    .sort_values(by=["Similarity"])
+                    .loc[lambda x: x["Similarity"] > 0.80]
+                    .rename(columns={"From": "bank_full_name"})
+                )
+            ),
+            (
+                temp_city_branch.merge(
+                    model.get_matches()
+                    .sort_values(by=["Similarity"])
+                    .loc[lambda x: x["Similarity"] > 0.80]
+                    .rename(columns={"From": "bank_full_name"})
+                )
+            ),
         ]
     )
+    .rename(columns={"To": "bank_name"})
+    .assign(
+        geocode4_corr=lambda x: np.where(
+            x["geocode4_corr"].isin(["<NA>", np.nan]), x["citycode"], x["geocode4_corr"]
+        )
+    )
+    .assign(
+        bank_type_adj=lambda x: np.where(
+            np.logical_and(
+                x["bank_type_adj"].isin([np.nan]), x["bank_type"] == "农村商业银行"
+            ),
+            "rural commercial bank",
+            x["bank_type_adj"],
+        )
+    )
+    .assign(
+        bank_type_adj=lambda x: np.where(
+            np.logical_and(
+                x["bank_type_adj"].isin([np.nan]), x["bank_type"] == "城市商业银行"
+            ),
+            "city commercial bank",
+            x["bank_type_adj"],
+        )
+    )
+    .merge(
+        df_citycode.drop_duplicates()
+        .assign(extra_code=lambda x: x["extra_code"].astype(str))
+        .rename(columns={"geocode4_corr": "geocode4_corr_adj"}),
+        right_on=["extra_code"],
+        left_on=["geocode4_corr"],
+    )
+    .drop(columns = ['geocode4_corr','extra_code'])
+    .rename(columns={"geocode4_corr_adj": "geocode4_corr"})
 )
-
-df_bank_branches = pd.concat(
-    [
-        (
-            df_bank.loc[
-                lambda x: ~x["id"].isin(df_bank_branches["id"].to_list())
-            ].reindex(
-                columns=[
-                    "id",
-                    "setdate",
-                    "year_setdate",
-                    "fullname",
-                    "bank_full_name",
-                    "registration_type",
-                    "city",
-                    "geocode4_corr",
-                    "bank_type",
-                    "bank_type_adj",
-                ]
-            )
-        ),
-        df_bank_branches,
-    ]
-).assign(
-    bank_type_adj_clean=lambda x: x.groupby(["bank_full_name"])[
-        "bank_type_adj"
-    ].transform(lambda x: x.ffill().bfill())
-)
+df_bank_status.head()
 ```
 
 ```sos kernel="SoS"
-(
-    df_bank_branches
-    .loc[lambda x: x["bank_type_adj_clean"].isin(['city commercial bank'])]
-    ['bank_full_name']
-    .value_counts()
-    .reset_index()
-    .sort_values(by = ['index'])
-)
-```
-
-```sos kernel="SoS"
-df_bank_branches.head()
+#df_bank_concat.loc[lambda x: x['bank_code'].isin(["A0002S2", "A0002S3"])]
 ```
 
 <!-- #region kernel="SoS" -->
-Example of banks without confident bank type
+We can know get the following information:
+
+- Number of registration per year
+- Number of total branches
 <!-- #endregion -->
 
 ```sos kernel="SoS"
 (
-    pd.read_csv(
-        "branch_matches.csv",
-        dtype={
-            "id": "str",
-            "geocode4_corr": "str",
-            "lostReason": "str",
-            "location": "str",
-            "city_temp": "str",
-            "points": "str",
-        },
+    df_bank_status
+    .loc[lambda x: x['year'] < "2022"]
+    .groupby(['bank_code'])
+    .agg({'bank_name':['nunique','unique', 'count']})
+    .sort_values(by = [('bank_name','count')])
+)
+```
+
+```sos kernel="SoS"
+x1 = (
+    df_bank_status
+    .loc[lambda x: x['status'].isin(['CCB'])]
+    .pivot_table(
+            values="id",
+            index=["bank_name"],
+            columns="year",
+            aggfunc='nunique',
+            fill_value=0,
+        )
+    .stack()
+    .reset_index()
+    .rename(columns={0: "count"})
+    #.loc[lambda x :x['bank_name'].isin(['上海银行'])]
+    .assign(
+            count=lambda x: x.groupby(["bank_name"])[
+                "count"
+            ].transform("cumsum"),
+            active = lambda x: np.where(x['count']> 0,1, 0)
+        )
+    .groupby(['year'])
+    .agg({'active':'sum'})
+    #.plot
+    #.line(title = 'Accumulation CCB over time',figsize=(10,6))
+    #.legend(loc='center left',bbox_to_anchor=(1.0, 0.5)) 
+)
+x2 = (
+    df_bank_status
+    .loc[lambda x: x['status'].isin(['CCB'])]
+    .pivot_table(
+            values="id",
+            index=["bank_name"],
+            columns="year",
+            aggfunc='nunique',
+            fill_value=0,
+        )
+    .stack()
+    .reset_index()
+    .rename(columns={0: "count"})
+    #.loc[lambda x :x['bank_name'].isin(['上海银行'])]
+    .assign(
+            count=lambda x: x.groupby(["bank_name"])[
+                "count"
+            ].transform("cumsum"),
+            active = lambda x: np.where(x['count']> 0,1, 0)
+        )
+    .groupby(['year'])
+    .agg({'count':'sum'})
+)
+```
+
+```sos kernel="SoS"
+ax1 = plt.subplot()
+l1, = ax1.plot(x1, color='red')
+ax1.set_xticklabels(x1.index, rotation=45)
+ax2 = ax1.twinx()
+l2, = ax2.plot(x2, color='orange')
+
+plt.legend([l1, l2], ["Nb of CCB", "Nb of branches"],loc='center left',bbox_to_anchor=(1.1, .9))
+plt.show()
+```
+
+<!-- #region kernel="SoS" -->
+Let's see the data is 3D:
+
+- year
+- province
+- number of branches
+<!-- #endregion -->
+
+```sos kernel="SoS"
+#df_bank_status.loc[lambda x: x['bank_name'].str.contains('上海')]
+```
+
+```sos kernel="SoS"
+test = (
+    df_bank_status
+    .loc[lambda x: x['status'].isin(['CCB'])]
+    .pivot_table(
+            values="id",
+            index=["bank_name", 'province_en','geocode4_corr'],
+            columns="year",
+            aggfunc='nunique',
+            fill_value=0,
+        )
+    .stack()
+    .reset_index()
+    .rename(columns={0: "count"})
+    .assign(
+            count=lambda x: x.groupby(["bank_name", 'province_en','geocode4_corr'])[
+                "count"
+            ].transform("cumsum"),
+            active = lambda x: np.where(x['count']> 0,1, 0)
+        )
+    .groupby(['province_en', 'year'])
+    .agg({'active':'sum'}) 
+    .reset_index()
+    .assign(
+    mx_ = lambda x: x.groupby(['province_en'])['active'].transform('max')
     )
-    .sort_values(by=["From"])
-    .loc[lambda x: x["Similarity"] <= 0.85]
+    .sort_values(by = ['mx_','province_en', 'year'], ascending= True)
+    .drop(columns ='mx_')
+)
+test.head()
+```
+
+```sos kernel="SoS"
+x = np.array([np.repeat(i, test['year'].nunique()) for i,j in enumerate(test['province_en'].unique())],dtype = 'float')
+y = np.array([np.repeat(i, test['province_en'].nunique()) for i,j in enumerate(test['year'].unique())],dtype = 'float').T
+z = (
+    test
+    .set_index(['province_en', 'year'])
+    .unstack()
+    .sort_values(by = [('active','2022')], ascending = False)
+    .to_numpy()
+    .astype(float)
+)
+y_tick = list(
+    test
+    .set_index(['province_en', 'year'])
+    .unstack()
+    .sort_values(by = [('active','2022')], ascending = False)
+    .index
+)
+x_tick = list(
+    test
+    .set_index(['province_en', 'year'])
+    .unstack()
+    .sort_values(by = [('active','2022')], ascending = False)
+    .droplevel(axis =1, level=0)
+    .columns
+)
+```
+
+```sos kernel="SoS"
+fig = plt.figure(figsize=(20,10))
+
+# add axes
+ax = fig.add_subplot(111,projection='3d')
+# plot the plane
+ax.plot_surface(y,x,z,cmap=cm.coolwarm)
+ax.view_init(30, 150)
+ax.set_xticks(ticks = np.arange(0, len(x_tick)))
+ax.set_xticklabels(x_tick,rotation=70, fontsize = 7)
+ax.set_yticks(ticks = np.arange(0, len(y_tick)))
+ax.set_yticklabels(y_tick,rotation=90, fontsize = 7)
+plt.title('Number of CCB per year and province in China')
+plt.show()
+```
+
+<!-- #region kernel="SoS" -->
+Largest CCB
+<!-- #endregion -->
+
+```sos kernel="SoS"
+(
+    df_bank_status.loc[lambda x: x['status'].isin(['CCB'])]['bank_name'].value_counts()
 )
 ```
 
@@ -1281,41 +1424,21 @@ download exiting branches
 <!-- #endregion -->
 
 ```sos kernel="SoS"
-import warnings
-import boto3
-import io
-warnings.filterwarnings("ignore")
-client_ = boto3.resource('s3')
-PATH_S3= "DATA/ECON/CHINA/CHINA_BANKING_AND_INSURANCE_REGULATORY_COMMISSION/BANK_BRANCHES"
-list_s3 = s3.list_all_files_with_prefix(prefix=os.path.join(PATH_S3, 'RAW_JSON_EXIT'))
-def convert_to_df(key):
-    obj = client_.Object(bucket, key)
-    body = obj.get()['Body'].read()
-    fix_bytes_value = body.replace(b"'", b'"')
-    my_json = json.load(io.BytesIO(fix_bytes_value))
-    return pd.DataFrame(my_json)
+#import warnings
+#import boto3
+#import io
+#warnings.filterwarnings("ignore")
+#client_ = boto3.resource('s3')
+#PATH_S3= "DATA/ECON/CHINA/CHINA_BANKING_AND_INSURANCE_REGULATORY_COMMISSION/BANK_BRANCHES"
+#list_s3 = s3.list_all_files_with_prefix(prefix=os.path.join(PATH_S3, 'RAW_JSON_EXIT'))
+#def convert_to_df(key):
+#    obj = client_.Object(bucket, key)
+#    body = obj.get()['Body'].read()
+#    fix_bytes_value = body.replace(b"'", b'"')
+#    my_json = json.load(io.BytesIO(fix_bytes_value))
+#    return pd.DataFrame(my_json)
 
-df_exit = pd.concat(map(convert_to_df, list_s3))
-```
-
-```sos kernel="SoS"
-temp = (
-    df_bank_branches
-    .loc[lambda x: ~x["bank_type_adj_clean"].isin([#"SOB",
-        "rural commercial bank",
-        'policy bank', 'other',
-        'joint-stock commercial bank','foreign bank'])]
-    .loc[lambda x: x['setdate'] < "2013"]
-    .loc[lambda x: ~x['geocode4_corr'].isin(["<NA>"])]
-    .dropna(subset = ['bank_type_adj_clean'])
-    .groupby(['year_setdate', 'geocode4_corr', 'bank_full_name'])
-    .agg({'id':'count'})
-    .sort_values(by = ["bank_full_name","geocode4_corr", "year_setdate"])
-    .loc[lambda x: x.index.get_level_values('bank_full_name').isin(['上海银行股份'])]
-    #.loc[lambda x: x.index.get_level_values('geocode4_corr').isin(['1101'])]
-    .reset_index()
-)
-temp.head()
+#df_exit = pd.concat(map(convert_to_df, list_s3))
 ```
 
 <!-- #region kernel="SoS" -->
@@ -1345,375 +1468,204 @@ def big_four(x):
 ```
 
 <!-- #region kernel="SoS" -->
-Add the data to the pollution dataset
+We need to construct the following index:
+
+- Number of CCB per city
+- HHI
+- Concentration ratio
 <!-- #endregion -->
 
 ```sos kernel="SoS"
-(
-    df_exit
-    .assign(
-    year_setdate = lambda x: pd.to_datetime(x['date']).dt.year
+df_ccb = (
+    #### Number of CCB per city
+    df_bank_status.pivot_table(
+        values="id",
+        index=["status", "bank_name", "geocode4_corr"],
+        columns="year",
+        aggfunc="nunique",
+        fill_value=0,
     )
-    ['year_setdate'].value_counts()
+    .stack()
     .reset_index()
-    .sort_values(by = ['index'])
+    .rename(columns={0: "count"})
+    .assign(
+        count=lambda x: x.groupby(["status", "bank_name", "geocode4_corr"])[
+            "count"
+        ].transform("cumsum"),
+        active=lambda x: np.where(x["count"] > 0, 1, 0),
+    )
+    .groupby(["year", "geocode4_corr", "status"])
+    .agg({"count": "sum", "active": "sum"})
+    .unstack(-1)
+    .collapse_levels(sep="_")
+    .rename(columns={"count_no CCB": "count_no_CCB", "active_no CCB": "active_no_CCB",})
+    .fillna(0)
+    .assign(
+        share_count_ccb=lambda x: (x["count_CCB"] / (x["count_CCB"] + x["count_no_CCB"])),
+        share_active_ccb=lambda x: (x["active_CCB"] / (x["active_CCB"] + x["active_no_CCB"])),
+    )
+    .fillna(0)
 )
+df_ccb.shape
 ```
 
 ```sos kernel="SoS"
-df_deregulation = (
-    (
-        df_bank_branches
-        # .loc[lambda x: ~x["geocode4_corr"].isin(["<NA>"])]
-        .merge(df_bank.reindex(columns=["id", "certcode"]))
-        .assign(
-            bank_full_name=lambda x: x["certcode"].astype(str).str.slice(stop=5),
-            city_id=lambda x: x["certcode"].astype(str).str.slice(start=7, stop=11),
-            is_equal=lambda x: x["city_id"] == x["geocode4_corr"],
-            geocode4_corr=lambda x: np.where(
-                x["is_equal"], x["geocode4_corr"], x["city_id"]
-            ),
-            types=lambda x: x["certcode"].astype(str).str.slice(start=5, stop=6),
-        )
-        .loc[lambda x: x["types"].isin(["S"])]
-        .assign(
-            bank_type_adj_clean=lambda x: x["bank_type_adj_clean"].fillna(
-                "city commercial bank"
-            )
-        )
-        # .dropna(subset=["bank_type_adj_clean", "bank_type_adj"])
-        .pivot_table(
-            values="id",
-            index=["bank_type_adj_clean", "geocode4_corr"],
-            columns="year_setdate",
-            aggfunc=len,
-            fill_value=0,
-        )
-        .stack()
-        .reset_index()
-        .rename(columns={0: "count"})
-        .assign(
-            count=lambda x: x.groupby(["bank_type_adj_clean", "geocode4_corr"])[
-                "count"
-            ].transform("cumsum")
-        )
-        .set_index(["bank_type_adj_clean", "geocode4_corr", "year_setdate"])
-        .unstack(0)
-        .fillna(0)
-        .droplevel(axis=1, level=0)
-        .reset_index()
-        .loc[lambda x: ~x["year_setdate"].isin(["<NA>"])]
-    )
-    .merge(
-        (
-            df_bank_branches
-            # .loc[lambda x: ~x["geocode4_corr"].isin(["<NA>"])]
-            .merge(df_bank.reindex(columns=["id", "certcode"]))
-            .assign(
-                bank_full_name=lambda x: x["certcode"].astype(str).str.slice(stop=5),
-                city_id=lambda x: x["certcode"].astype(str).str.slice(start=7, stop=11),
-                is_equal=lambda x: x["city_id"] == x["geocode4_corr"],
-                geocode4_corr=lambda x: np.where(
-                    x["is_equal"], x["geocode4_corr"], x["city_id"]
-                ),
-                types=lambda x: x["certcode"].astype(str).str.slice(start=5, stop=6),
-            )
-            .loc[lambda x: x["types"].isin(["S"])]
-            .loc[lambda x: ~x["year_setdate"].isin(["<NA>"])]
-            .dropna(
-                subset=[
-                    "bank_type_adj_clean",
-                    # "bank_type_adj"
-                ]
-            )
-            .groupby(["year_setdate", "geocode4_corr", "bank_full_name"])
-            .agg({"id": "count"})
-            .sort_values(by=["bank_full_name", "geocode4_corr", "year_setdate"])
-            .reset_index()
-            .pivot_table(
+#df_bank_status.loc[lambda x: x['geocode4_corr'].isin([1412])]
+```
+
+```sos kernel="SoS"
+df_ccb.loc[lambda x: x['share_count_ccb'].isin([np.nan])]
+```
+
+```sos kernel="SoS"
+df_hhi = (
+            #### HHI
+            df_bank_status.pivot_table(
                 values="id",
-                index=["bank_full_name", "geocode4_corr"],
-                columns="year_setdate",
-                aggfunc=np.sum,
-                # fill_value=0,
-            )
-            .stack(dropna=False)
-            .reset_index()
-            .rename(columns={0: "count"})
-            .assign(
-                temp=lambda x: x.groupby(["bank_full_name", "geocode4_corr"])[
-                    "count"
-                ].transform("cumsum"),
-                temp_1=lambda x: x.groupby(["bank_full_name", "geocode4_corr", "temp"])[
-                    "year_setdate"
-                ]
-                .transform("min")
-                .fillna("2222")
-                .astype("int"),
-                first_entry=lambda x: x.groupby(["bank_full_name", "geocode4_corr"])[
-                    "temp_1"
-                ].transform("min"),
-                count=lambda x: x["count"].fillna(0),
-            )
-            .loc[lambda x: x["year_setdate"].astype("int") >= x["first_entry"]]
-            .drop(columns=["temp", "temp_1", "first_entry"])
-            .assign(
-                totalBranchBank=lambda x: x.groupby(
-                    ["bank_full_name", "geocode4_corr"]
-                )["count"].transform("cumsum"),
-                totalBranchCity=lambda x: x.groupby(["geocode4_corr", "year_setdate"])[
-                    "totalBranchBank"
-                ].transform("sum"),
-                deregulation=lambda x: (x["totalBranchBank"] / x["totalBranchCity"])
-                ** 2,
-            )
-            .groupby(["year_setdate", "geocode4_corr"])
-            .agg({"deregulation": "sum"})
-            .reset_index()
-            .dropna(subset=["deregulation"])
-            .assign(deregulation_ct=lambda x: x["deregulation"]#1 - x["deregulation"]
-                   )
-        ),
-        how="left",
-        on=["year_setdate", "geocode4_corr"],
-    )
-    .merge(
-        (
-            df_bank_branches.assign(
-                sob=lambda x: x.apply(lambda x: big_four(x["bank_full_name"]), axis=1)
-            )
-            .loc[lambda x: ~x["geocode4_corr"].isin(["<NA>"])]
-            .dropna(subset=["bank_type_adj_clean", "bank_type_adj"])
-            .groupby(["year_setdate", "geocode4_corr", "sob"])
-            .agg({"id": "count"})
-            .sort_values(by=["sob", "geocode4_corr", "year_setdate"])
-            .reset_index()
-            .pivot_table(
-                values="id",
-                index=["sob", "geocode4_corr"],
-                columns="year_setdate",
-                aggfunc=np.sum,
+                index=["bank_name", "geocode4_corr"],
+                columns="year",
+                aggfunc="nunique",
                 fill_value=0,
             )
             .stack()
             .reset_index()
             .rename(columns={0: "count"})
             .assign(
-                temp=lambda x: x.groupby(["sob", "geocode4_corr"])[
+                count=lambda x: x.groupby(["bank_name", "geocode4_corr"])[
                     "count"
                 ].transform("cumsum"),
-                temp_1=lambda x: x.groupby(["sob", "geocode4_corr", "temp"])[
-                    "year_setdate"
-                ]
-                .transform("min")
-                .fillna("2222")
-                .astype("int"),
-                first_entry=lambda x: x.groupby(["sob", "geocode4_corr"])[
-                    "temp_1"
-                ].transform("min"),
-                count=lambda x: x["count"].fillna(0),
-            )
-            .loc[lambda x: x["year_setdate"].astype("int") >= x["first_entry"]]
-            .drop(columns=["temp", "temp_1", "first_entry"])
-            .assign(
-                totalBranchBank=lambda x: x.groupby(["sob", "geocode4_corr"])[
+                active=lambda x: np.where(x["count"] > 0, 1, 0),
+                total_city=lambda x: x.groupby(["year", "geocode4_corr"])[
                     "count"
-                ].transform("cumsum"),
-                totalBranchCity=lambda x: x.groupby(["geocode4_corr", "year_setdate"])[
-                    "totalBranchBank"
                 ].transform("sum"),
-                #    score = lambda x: (x['totalBranchBank']/x['totalBranchCity'])**2
+                total_city_active=lambda x: x.groupby(["year", "geocode4_corr"])[
+                    "active"
+                ].transform("sum"),
+                score_count=lambda x: (x["count"] / x["total_city"]) ** 2,
+                score_active=lambda x: (x["active"] / x["total_city_active"]) ** 2,
             )
-            .loc[lambda x: x["sob"] != "other"]
-            .set_index(["sob", "geocode4_corr", "year_setdate", "totalBranchCity"])
-            .drop(columns=["count"])
-            .unstack(0)
-            .assign(total_sob=lambda x: x.sum(axis=1))
-            .reset_index(["totalBranchCity"])
+            .groupby(["year", "geocode4_corr"])
+            .agg({"score_count": "sum", "score_active": "sum"})
             .assign(
-                concentration_sob=lambda x: x[("total_sob", "")]
-                / x[("totalBranchCity", "")]
+                hhi_branches=lambda x: 1 - x["score_count"],
+                hhi_branches_name=lambda x: 1 - x["score_active"],
             )
-            .reindex(columns=[("total_sob", ""), ("concentration_sob", "")])
-            .droplevel(axis=1, level=1)
-            .reset_index()
-            .dropna(subset=["concentration_sob"])
-            .assign(concentration_sob_ct=lambda x: 1 - x["concentration_sob"]
-                   )
-        ),
-        how="left",
-        on=["year_setdate", "geocode4_corr"],
-    )
-    .merge(
-        (
-            df_bank_branches
-            # .loc[lambda x: ~x["geocode4_corr"].isin(["<NA>"])]
-            .merge(df_bank.reindex(columns=["id", "certcode"]))
-            .assign(
-                bank_full_name=lambda x: x["certcode"].astype(str).str.slice(stop=5),
-                city_id=lambda x: x["certcode"].astype(str).str.slice(start=7, stop=11),
-                is_equal=lambda x: x["city_id"] == x["geocode4_corr"],
-                geocode4_corr=lambda x: np.where(
-                    x["is_equal"], x["geocode4_corr"], x["city_id"]
-                ),
-                types=lambda x: x["certcode"].astype(str).str.slice(start=5, stop=6),
+        )
+df_hhi.shape
+```
+
+```sos kernel="SoS"
+df_hhi.isna().sum()
+```
+
+```sos kernel="SoS"
+df_concentration = (
+            df_bank_status.assign(
+                sob=lambda x: np.where(x['bank_type_adj'].isin(['SOB']), True, False)
             )
-            .loc[lambda x: x["types"].isin(["S"])]
-            .loc[lambda x: ~x["year_setdate"].isin(["<NA>"])]
-            .assign(
-                bank_type_adj_clean=lambda x: x["bank_type_adj_clean"].fillna(
-                    "city commercial bank"
-                )
-            )
-            .dropna(
-                subset=[
-                    "bank_type_adj_clean",
-                    # "bank_type_adj"
-                ]
-            )
-            .groupby(
-                [
-                    "year_setdate",
-                    "geocode4_corr",
-                    "bank_type_adj_clean",
-                    "bank_full_name",
-                ]
-            )
+            .groupby(["year", "geocode4_corr", "sob"])
             .agg({"id": "count"})
-            .sort_values(by=["bank_full_name", "geocode4_corr", "year_setdate"])
+            .sort_values(by=["sob", "geocode4_corr", "year"])
             .reset_index()
             .pivot_table(
                 values="id",
-                index=["bank_full_name", "bank_type_adj_clean", "geocode4_corr"],
-                columns="year_setdate",
+                index=["sob", "geocode4_corr"],
+                columns="year",
                 aggfunc=np.sum,
-                # fill_value=0,
+                fill_value=0,
             )
-            .stack(dropna=False)
+            .stack()
             .reset_index()
             .rename(columns={0: "count"})
+            .sort_values(by = ['year',  'sob','geocode4_corr'])
             .assign(
-                temp=lambda x: x.groupby(["bank_full_name", "geocode4_corr"])[
+                count=lambda x: x.groupby(["sob",  "geocode4_corr"])[
                     "count"
-                ].transform("cumsum"),
-                temp_1=lambda x: x.groupby(["bank_full_name", "geocode4_corr", "temp"])[
-                    "year_setdate"
-                ]
-                .transform("min")
-                .fillna("2222")
-                .astype("int"),
-                first_entry=lambda x: x.groupby(["bank_full_name", "geocode4_corr"])[
-                    "temp_1"
-                ].transform("min"),
-                count=lambda x: x["count"].fillna(0),
+                ].transform("cumsum")
             )
-            .loc[lambda x: x["year_setdate"].astype("int") >= x["first_entry"]]
-            .drop(columns=["temp", "temp_1", "first_entry"])
-            .assign(
-                totalBranchBank=lambda x: x.groupby(
-                    ["bank_full_name", "geocode4_corr"]
-                )["count"].transform("cumsum"),
-                totalBranchCity=lambda x: x.groupby(["geocode4_corr", "year_setdate"])[
-                    "totalBranchBank"
-                ].transform("sum"),
-                deregulation=lambda x: (x["totalBranchBank"] / x["totalBranchCity"])
-                ** 2,
-            )
-            .loc[lambda x: x["bank_type_adj_clean"].isin(["city commercial bank"])]
-            .groupby(["year_setdate", "geocode4_corr"])
-            .agg({"totalBranchBank": "sum", "totalBranchCity": "mean"})
-            .assign(share_branch=lambda x: x["totalBranchBank"] / x["totalBranchCity"])
-            .reset_index()
-        ),
-        how="left",
-        on=["year_setdate", "geocode4_corr"],
+            .set_index(['year', 'geocode4_corr', 'sob'])
+            .unstack(-1)
+    .assign(
+    concentration = lambda x: 1-(x[('count',True)] / ( x[('count',True)] +  x[('count',False)]))
     )
-    .rename(
-        columns={
-            "city commercial bank": "city_commercial_bank",
-            "foreign bank": "foreign_bank",
-            "joint-stock commercial bank": "joint_stock_commercial_bank",
-            "policy bank": "policy_bank",
-            "rural commercial bank": "rural_commercial_bank",
+    .collapse_levels(sep='_')
+        )
+```
+
+```sos kernel="SoS"
+df_deregulation = pd.concat([df_ccb,df_hhi,df_concentration], axis =1)
+df_deregulation = (
+    df_deregulation.assign(
+        **{
+            "lag_{}".format(i): df_deregulation.groupby(["geocode4_corr"])[i].transform(
+                "shift"
+            )
+            for i in df_deregulation.columns
         }
     )
-    .assign(
-        share_commercial_branch=lambda x: x["city_commercial_bank"]
-        / x["totalBranchCity"],
-        share_branch=lambda x: x["share_branch"].fillna(0),
-    )
-    .assign(share_commercial_branch=lambda x: x["share_commercial_branch"].fillna(0))
-    .merge(
-    (
-        df_bank_branches
-        # .loc[lambda x: ~x["geocode4_corr"].isin(["<NA>"])]
-        .merge(df_bank.reindex(columns=["id", "certcode"]))
-        .assign(
-            bank_full_name=lambda x: x["certcode"].astype(str).str.slice(stop=5),
-            city_id=lambda x: x["certcode"].astype(str).str.slice(start=7, stop=11),
-            is_equal=lambda x: x["city_id"] == x["geocode4_corr"],
-            geocode4_corr=lambda x: np.where(
-                x["is_equal"], x["geocode4_corr"], x["city_id"]
-            ),
-            types=lambda x: x["certcode"].astype(str).str.slice(start=5, stop=6),
-        )
-        .loc[lambda x: x["types"].isin(["S"])]
-        .assign(
-            bank_type_adj_clean=lambda x: x["bank_type_adj_clean"].fillna(
-                "city commercial bank"
-            )
-        )
-    .loc[lambda x: x["bank_type_adj_clean"].isin(['city commercial bank'])]
-    .groupby(['year_setdate','geocode4_corr'])
-    .agg({'id':'count'})
-    .rename(columns = {'id':'city_bank'})
-    .reset_index()
-)   , how = 'left'
-    )
-    .assign(city_bank=lambda x: x["city_bank"].fillna(0))
 )
-df_deregulation = df_deregulation.assign(
-    **{
-        "lag_{}".format(i): df_deregulation.groupby(["geocode4_corr"])[i].transform(
-            "shift"
-        )
-        for i in [
-            'city_bank',
-            "city_commercial_bank",
-            "share_commercial_branch",
-            "totalBranchBank",
-            "totalBranchCity",
-            "deregulation_ct",
-            "concentration_sob_ct",
-            "share_branch",
+df_deregulation.shape
+```
+
+```sos kernel="SoS"
+df_deregulation = (
+    df_deregulation.reindex(
+        columns=[
+            "count_CCB",
+            "lag_count_CCB",
+            "count_no_CCB",
+            "lag_count_no_CCB",
+            "active_CCB",
+            "lag_active_CCB",
+            "active_no_CCB",
+            "lag_active_no_CCB",
+            "share_count_ccb",
+            "lag_share_count_ccb",
+            "share_active_ccb",
+            "lag_share_active_ccb",
+            #"score_count",
+            #"lag_score_count",
+            #"score_active",
+            #"lag_score_active",
+            "hhi_branches",
+            "lag_hhi_branches",
+            "hhi_branches_name",
+            "lag_hhi_branches_name",
+            "count_False",
+            "lag_count_False",
+            "count_True",
+            "lag_count_True",
+            "concentration",
+            "lag_concentration",
         ]
-    }
+    )
+    .reset_index()
+    .loc[lambda x: x["year"] > "1997"]
 )
-df_deregulation.loc[lambda x: x["year_setdate"] > "1995"][
-    [
-        "lag_city_bank",
-        "lag_city_commercial_bank",
-        "lag_totalBranchBank",
-        "lag_totalBranchCity",
-        "lag_share_commercial_branch",
-        "deregulation_ct",
-        "lag_deregulation_ct",
-        "concentration_sob_ct",
-        "lag_concentration_sob_ct",
-        "share_branch",
-        "lag_share_branch",
-    ]
-].describe(percentiles=np.arange(0, 1, 0.1))
+df_deregulation.columns = (
+    df_deregulation.columns.str.strip()
+    .str.replace(" ", "_")
+    .str.replace("-", "_")
+    .str.lower()
+)
+df_deregulation.tail()
+```
+
+```sos kernel="SoS"
+df_deregulation.isna().sum()
+```
+
+```sos kernel="SoS"
+df_deregulation.shape
 ```
 
 ```sos kernel="SoS"
 (
     df_deregulation
-    .loc[lambda x: x['year_setdate'] > "1994"]
-    .groupby("year_setdate")
+    .groupby("year")
     .agg({
-        "deregulation_ct": "mean",
-        "concentration_sob_ct":"mean",
+        "hhi_branches": "mean",
+        "concentration":"mean",
         #'share_branch':'mean'
     })
     .plot.line(title="concentration SOB", figsize=(15, 10))
@@ -1722,20 +1674,12 @@ df_deregulation.loc[lambda x: x["year_setdate"] > "1995"][
 plt.show()
 ```
 
-```sos kernel="SoS"
-(
-    df_deregulation
-    .loc[lambda x: x['geocode4_corr'].isin(['6110'])]
-    .loc[lambda x: x['year_setdate'] > "2000"]
-)
-```
-
 <!-- #region kernel="SoS" -->
 ### Merge data
 <!-- #endregion -->
 
 ```sos kernel="SoS"
-df_innovation.dtypes
+df_pol.shape
 ```
 
 ```sos kernel="SoS"
@@ -1744,6 +1688,7 @@ df_bank_dereg_final = (
     .assign(
         province_en=lambda x: x["province_en"].str.strip(),
         geocode4_corr=lambda x: x["geocode4_corr"].astype(str),
+        #ind2 = lambda x: x['cic'].astype(str).str.slice(stop = 2)
     )
     .merge(
         (
@@ -1756,11 +1701,10 @@ df_bank_dereg_final = (
             .reindex(columns=["year", "province_en", "lag_credit_supply_long_term",'credit_supply_long_term'])
         )
     )
-    .merge(df_credit_constraint)
-    .merge(
-        df_asif.assign(geocode4_corr=lambda x: x["geocode4_corr"].astype(str)).rename(
-            columns={"indu_2": "ind2"}
-        )
+    .merge(df_credit_constraint#.assign(ind2=lambda x: x["ind2"].astype(str))
+          )
+     .merge(
+        df_asif.assign(geocode4_corr=lambda x: x["geocode4_corr"].astype(str)).rename(columns={"indu_2": "ind2"})
     )
     .merge(
         df_deregulation.rename(columns={"year_setdate": "year"}).assign(
@@ -1776,25 +1720,14 @@ df_bank_dereg_final = (
     .merge(df_output.assign(
         geocode4_corr=lambda x: x["geocode4_corr"].astype(str),
     ), on=["year", "geocode4_corr", 'ind2'], how = 'left')
-    .merge(df_tcz.assign(
-        geocode4_corr=lambda x: x["geocode4_corr"].astype(str))
+    .merge(df_tcz.drop_duplicates().assign(
+        geocode4_corr=lambda x: x["geocode4_corr"].astype(str)),how = 'left'
           )
     .assign(
         tcz = lambda x: x['tcz'].fillna(0),
         spz = lambda x: x['spz'].fillna(0),
-        tso2_eq_output=lambda x: (x["tdso2_equip"]) / (x["output"] / 1000),
-        tso2_eq_output_1=lambda x: (x["tdso2_equip"] + 1) / (x["output"] / 1000),
-        # tso2_eq_asset = lambda x: (x['tdso2_equip'])/(x['total_asset']/1000),
-        # tso2_eq_asset_1 = lambda x: (x['tdso2_equip']+1)/(x['total_asset']/1000),
-        constraint=lambda x: x["credit_constraint"] > -0.44,
-        constraint_1=lambda x: x["credit_constraint"] > -0.26,
-        target=lambda x: np.where(x["tdso2_equip"] > 0, 1, 0),
-        equipment_s02=lambda x: (x["tdso2_equip"] / x["tso2"]) * 100,
         gdp_pop=lambda x: x["gdp"] / x["population"],
         fdi_gdp=lambda x: x["fdi"] / x["gdp"],
-        # intensity=lambda x: x["ttlssnl"]/ x["sales"],
-        year=lambda x: x["year"].astype(int),
-        geocode4_corr=lambda x: x["geocode4_corr"].astype(str),
         fe_t_i=lambda x: pd.factorize(
             x["year"].astype("string") + x["ind2"].astype("string")
         )[0],
@@ -1806,10 +1739,11 @@ df_bank_dereg_final = (
         )[0],
     )
 )
+df_bank_dereg_final.shape
 ```
 
 ```sos kernel="SoS"
-df_bank_dereg_final.shape
+df_bank_dereg_final.head()
 ```
 
 ```sos kernel="SoS"
@@ -1817,32 +1751,33 @@ df_bank_dereg_final.isna().sum().loc[lambda x: x>0].sort_values()
 ```
 
 ```sos kernel="SoS"
-df_bank_dereg_final.loc[lambda x: x["asset_tangibility_tot_asset"].isin([np.nan])]
+(
+    df_bank_dereg_final
+    .to_csv(
+    os.path.join("df_fin_dep_pollution_baseline_industry" + '.csv')
+    )
+)
 ```
 
 ```sos kernel="SoS"
-(
-    df_bank_dereg_final
-.assign(
-        
-        **{
-            '{}'.format(i) : 
-        df_bank_dereg_final.groupby(['year','province_en'])[i].transform(lambda x: x.fillna(x.mean())) for i 
-            in [
-               'city_commercial_bank',
-       'foreign_bank', 'other', 'policy_bank',
-       'rural_commercial_bank', 'deregulation', 'deregulation_ct', 'total_sob',
-       'concentration_sob', 'concentration_sob_ct', 'totalBranchBank',
-       'totalBranchCity', 'share_branch', 'share_commercial_branch',
-       'lag_city_commercial_bank', 'lag_share_commercial_branch',
-       'lag_totalBranchBank', 'lag_totalBranchCity', 'lag_deregulation_ct',
-       'lag_concentration_sob_ct', 'lag_share_branch']
-        }
-    )
-    
-).to_csv(
-    os.path.join(path_local, "df_fin_dep_pollution_baseline_industry" + '.csv')
-)
+#(
+#    df_bank_dereg_final
+#.assign(
+#               **{
+#            '{}'.format(i) : 
+#        df_bank_dereg_final.groupby(['year','province_en'])[i].transform(lambda x: x.fillna(x.mean())) for i 
+#            in [
+#              'city_commercial_bank',
+#     'foreign_bank', 'other', 'policy_bank',
+#       'rural_commercial_bank', 'deregulation', 'deregulation_ct', 'total_sob',
+#       'concentration_sob', 'concentration_sob_ct', 'totalBranchBank',
+#       'totalBranchCity', 'share_branch', 'share_commercial_branch',
+#       'lag_city_commercial_bank', 'lag_share_commercial_branch',
+#       'lag_totalBranchBank', 'lag_totalBranchCity', 'lag_deregulation_ct',
+#       'lag_concentration_sob_ct', 'lag_share_branch']
+#        }
+#    )   
+#)
 ```
 
 <!-- #region kernel="SoS" nteract={"transient": {"deleting": false}} -->
@@ -2091,14 +2026,14 @@ source(path)
 
 ```sos kernel="R"
 %get df_path
-df_final <- read_csv(df_path) %>%
+df_final <- read_csv("df_fin_dep_pollution_baseline_industry.csv") %>%
 mutate_if(is.character, as.factor) %>%
     mutate_at(vars(starts_with("fe")), as.factor) %>%
 mutate(tcz = relevel(as.factor(tcz), ref=1))%>%
 filter(!is.na(lag_credit_supply_long_term)) %>%
-      filter(!is.na(lag_concentration_sob_ct)) %>%
-      filter(!is.na(lag_totalBranchCity))%>%
-      filter(lag_concentration_sob_ct > 0) %>%
+      #filter(!is.na(lag_concentration)) %>%
+      #filter(!is.na(lag_totalBranchCity))%>%
+      #filter(lag_concentration_sob_ct > 0) %>%
       filter(!is.na(fdi_gdp)) %>%
       filter(!is.na(gdp_pop)) %>%
 filter(fdi_gdp  > 0) %>%
@@ -2117,15 +2052,11 @@ filter(capital  > 0)
 
 ```
 
-```sos kernel="SoS"
-df_bank_dereg_final.columns
-```
-
 <!-- #region kernel="R" -->
 Aggregate at the province-industry-year level
 <!-- #endregion -->
 
-<!-- #region kernel="R" -->
+<!-- #region kernel="R" heading_collapsed="true" -->
 ## Variables Definition
 
 1. credit_supply: Province-year supply all loans over GDP
@@ -2460,42 +2391,35 @@ dim(df_final)
 df_bank_dereg_final.columns
 ```
 
-```sos kernel="SoS"
-#df_bank_dereg_final.isna().sum().loc[lambda x: x>0]
-```
+<!-- #region kernel="SoS" -->
+- 'count_ccb',
+- 'lag_count_ccb' : OK
+- active_ccb
+- lag_active_ccb: OK
+- share_count_ccb
+- lag_share_count_ccb: OK
+- share_active_ccb
+- lag_share_active_ccb: OK
+- hhi_branches
+- lag_hhi_branches: OK
+- hhi_branches_name
+- lag_hhi_branches_name: OK
+- concentration
+- lag_concentration: OK
+<!-- #endregion -->
 
-```sos kernel="R"
-feols(log(tso2) ~  
-            log(output) + log(employment) + log(capital) + 
-            log(gdp_pop) * credit_constraint +
-            log(fdi_gdp) * credit_constraint +
-            #credit_supply_long_term * credit_constraint +
-            lag_concentration_sob_ct * credit_constraint
-           | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>%filter(tso2 > 0)
-      ,
-      #cluster = ~geocode4_corr + ind2#
-      vcov = 'iid'
-              )
-```
+<!-- #region kernel="SoS" -->
+- 'lag_count_ccb' : NOT OK
+- lag_active_ccb: NOT OK
+- lag_share_count_ccb: NOT OK
+- lag_share_active_ccb: NOT OK
+- lag_hhi_branches: NOT OK
+- lag_hhi_branches_name: NOT OK
+- lag_concentration: NOT OK
+<!-- #endregion -->
 
 ```sos kernel="SoS"
 #df_bank_dereg_final[['tso2']].describe(percentiles = np.arange(0,1,.05))
-```
-
-```sos kernel="R"
-feols(log(tso2) ~  
-            log(output) + log(employment) + log(capital) + 
-            log(gdp_pop) * credit_constraint +
-            log(fdi_gdp) * credit_constraint +
-            #credit_supply_long_term * credit_constraint +
-            lag_city_commercial_bank  * credit_constraint
-           | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>%filter(tso2 > 0) #%>% filter(tso2 < 5.383850e+06)
-      ,
-      #cluster = ~geocode4_corr + ind2#
-      vcov = 'iid'
-              )
 ```
 
 ```sos kernel="R"
@@ -2505,12 +2429,11 @@ t0 <- feols(log(tso2) ~
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint +
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_concentration_sob_ct) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_count_ccb * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
       df_final %>%filter(tso2 > 0)
       ,
-      #cluster = ~geocode4_corr + ind2#
       vcov = 'iid'
               )
 
@@ -2518,37 +2441,34 @@ t1 <- feols(log(tso2) ~
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint +
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_totalBranchCity) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_hhi_branches * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
       df_final %>%filter(tso2 > 0)
       ,
-      #cluster = ~geocode4_corr + ind2#
-      vcov = 'iid'
-              )
+      vcov = 'iid')
 #### COD
 t2 <- feols(log(tcod) ~  
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint +
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_concentration_sob_ct) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_count_ccb * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>%filter(tcod > 300)
+      df_final %>%filter(tcod > 40)
       ,
-      #cluster = ~geocode4_corr + ind2#
       vcov = 'iid'
               )
+
 t3 <- feols(log(tcod) ~  
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint +
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_totalBranchCity) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_hhi_branches * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>% filter(tcod > 300)
+      df_final %>%filter(tcod > 40)
       ,
-      #cluster = ~geocode4_corr + ind2#
       vcov = 'iid'
               )
 
@@ -2556,25 +2476,23 @@ t3 <- feols(log(tcod) ~
 t4 <- feols(log(twaste_water) ~  
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
-            log(fdi_gdp) * credit_constraint + 
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_concentration_sob_ct) * credit_constraint
+            log(fdi_gdp) * credit_constraint +
+            lag_credit_supply_long_term * credit_constraint +
+            lag_count_ccb * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>%filter(twaste_water > 100)
+      df_final %>%filter(twaste_water > 0)
       ,
-      #cluster = ~geocode4_corr + ind2#
       vcov = 'iid'
               )
 t5 <- feols(log(twaste_water) ~  
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
-            log(fdi_gdp) * credit_constraint + 
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_totalBranchCity) * credit_constraint
+            log(fdi_gdp) * credit_constraint +
+            lag_credit_supply_long_term * credit_constraint +
+            lag_hhi_branches * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>% filter(twaste_water > 100)
+      df_final %>%filter(twaste_water > 0)
       ,
-      #cluster = ~geocode4_corr + ind2#
       vcov = 'iid'
               )
 #table_1 <- go_latex(list(
@@ -2587,6 +2505,10 @@ t5 <- feols(log(twaste_water) ~
 #    note = FALSE,
 #    name=path
 #) 
+```
+
+```sos kernel="R"
+t3
 ```
 
 ```sos kernel="R"
@@ -2626,8 +2548,8 @@ t0 <- feols(log(tso2) ~
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint + 
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_concentration_sob_ct) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_count_ccb * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
       df_final %>%filter(ind2 %in% list_polluting) %>%filter(tso2 > 0)
       ,
@@ -2635,12 +2557,13 @@ t0 <- feols(log(tso2) ~
       vcov = 'iid'
               )
 
+
 t1 <- feols(log(tso2) ~  
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint + 
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_concentration_sob_ct) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_count_ccb * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
       df_final%>%filter(!ind2 %in% list_polluting)  %>%filter(tso2 > 0)
       , 
@@ -2652,8 +2575,8 @@ t2 <- feols(log(tso2) ~
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint + 
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_totalBranchCity) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_hhi_branches * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
       df_final %>%filter(ind2 %in% list_polluting) %>%filter(tso2 > 0)
       ,
@@ -2665,8 +2588,8 @@ t3 <- feols(log(tso2) ~
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint + 
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_totalBranchCity) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_hhi_branches * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
       df_final %>%filter(!ind2 %in% list_polluting) %>%filter(tso2 > 0)
       ,
@@ -2679,10 +2602,10 @@ t4 <- feols(log(tcod) ~
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint +  
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_concentration_sob_ct) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_count_ccb * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
-      df_final%>%filter(ind2 %in% list_polluting)  %>%filter(tcod > 300)
+      df_final%>%filter(ind2 %in% list_polluting)  %>%filter(tcod > 40)
       ,
       #cluster = ~geocode4_corr + ind2#
       vcov = 'iid'
@@ -2691,10 +2614,10 @@ t5 <- feols(log(tcod) ~
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint +  
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_concentration_sob_ct) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_count_ccb * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>%filter(!ind2 %in% list_polluting) %>%filter(tcod > 300)
+      df_final %>%filter(!ind2 %in% list_polluting) %>%filter(tcod > 40)
       ,
       #cluster = ~geocode4_corr + ind2#
       vcov = 'iid'
@@ -2703,10 +2626,10 @@ t6 <- feols(log(tcod) ~
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint + 
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_totalBranchCity) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_hhi_branches * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>%filter(ind2 %in% list_polluting) %>%filter(tcod > 300)
+      df_final %>%filter(ind2 %in% list_polluting) %>%filter(tcod > 40)
       , 
       #cluster = ~geocode4_corr + ind2#
       vcov = 'iid'
@@ -2715,10 +2638,10 @@ t7 <- feols(log(tcod) ~
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint + 
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_totalBranchCity) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_hhi_branches * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>%filter(!ind2 %in% list_polluting) %>%filter(tcod > 300)
+      df_final %>%filter(!ind2 %in% list_polluting) %>%filter(tcod > 40)
       ,
       #cluster = ~geocode4_corr + ind2#
       vcov = 'iid'
@@ -2729,10 +2652,10 @@ t8 <- feols(log(twaste_water) ~
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint +  
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_concentration_sob_ct) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_count_ccb * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
-      df_final%>%filter(ind2 %in% list_polluting)  %>%filter(twaste_water > 100)
+      df_final%>%filter(ind2 %in% list_polluting)  %>%filter(twaste_water > 0)
       ,
       #cluster = ~geocode4_corr + ind2#
       vcov = 'iid'
@@ -2741,10 +2664,10 @@ t9 <- feols(log(twaste_water) ~
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint +  
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_concentration_sob_ct) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_count_ccb * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
-      df_final%>%filter(!ind2 %in% list_polluting)  %>%filter(twaste_water > 100)
+      df_final%>%filter(!ind2 %in% list_polluting)  %>%filter(twaste_water > 0)
       ,
       #cluster = ~geocode4_corr + ind2#
       vcov = 'iid'
@@ -2753,10 +2676,10 @@ t10 <- feols(log(twaste_water) ~
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint +  
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_totalBranchCity) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_hhi_branches * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>%filter(ind2 %in% list_polluting) %>%filter(twaste_water > 100)
+      df_final %>%filter(ind2 %in% list_polluting) %>%filter(twaste_water > 0)
       ,
       #cluster = ~geocode4_corr + ind2#
       vcov = 'iid'
@@ -2765,10 +2688,10 @@ t11 <- feols(log(twaste_water) ~
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint +  
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_totalBranchCity) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_hhi_branches * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>%filter(!ind2 %in% list_polluting) %>%filter(twaste_water > 100)
+      df_final %>%filter(!ind2 %in% list_polluting) %>%filter(twaste_water > 0)
       ,
       #cluster = ~geocode4_corr + ind2#
       vcov = 'iid'
@@ -2982,31 +2905,31 @@ df_soe <- df_final %>% inner_join(read_csv('list_city_soe_output_0.5.csv'))
 df_priv <- df_final %>% left_join(read_csv('list_city_soe_output_0.5.csv'))
 df_dom <- df_final %>% left_join(read_csv('list_city_for_output_0.5.csv')) %>% filter(is.na(share_for))
 print(dim(df_soe)[1] + dim(df_priv)[1] == dim(df_final)[1])
-
 ###### TSO2
 ### CITY DOMINATED
 t0 <- feols(log(tso2) ~  
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint + 
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_concentration_sob_ct) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_count_ccb * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
-      df_soe %>%filter(tso2 > 100)
+      df_soe %>%filter(ind2 %in% list_polluting) %>%filter(tso2 > 0)
       ,
       #cluster = ~geocode4_corr + ind2#
       vcov = 'iid'
               )
 
+
 t1 <- feols(log(tso2) ~  
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint + 
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_concentration_sob_ct) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_count_ccb * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
-      df_priv %>%filter(tso2 > 100)
-      ,
+      df_priv%>%filter(!ind2 %in% list_polluting)  %>%filter(tso2 > 0)
+      , 
       #cluster = ~geocode4_corr + ind2#
       vcov = 'iid'
               )
@@ -3015,10 +2938,10 @@ t2 <- feols(log(tso2) ~
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint + 
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_totalBranchCity) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_hhi_branches * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
-      df_soe %>% filter(tso2 > 100)
+      df_soe %>%filter(ind2 %in% list_polluting) %>%filter(tso2 > 0)
       ,
       #cluster = ~geocode4_corr + ind2#
       vcov = 'iid'
@@ -3028,10 +2951,10 @@ t3 <- feols(log(tso2) ~
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint + 
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_totalBranchCity) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_hhi_branches * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
-      df_priv %>% filter(tso2 > 100)
+      df_priv %>%filter(!ind2 %in% list_polluting) %>%filter(tso2 > 0)
       ,
       #cluster = ~geocode4_corr + ind2#
       vcov = 'iid'
@@ -3042,10 +2965,10 @@ t4 <- feols(log(tcod) ~
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint +  
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_concentration_sob_ct) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_count_ccb * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
-      df_soe %>%filter(tcod > 300)
+      df_soe%>%filter(ind2 %in% list_polluting)  %>%filter(tcod > 40)
       ,
       #cluster = ~geocode4_corr + ind2#
       vcov = 'iid'
@@ -3054,10 +2977,10 @@ t5 <- feols(log(tcod) ~
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint +  
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_concentration_sob_ct) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_count_ccb * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
-      df_priv %>%filter(tcod > 300)
+      df_priv %>%filter(!ind2 %in% list_polluting) %>%filter(tcod > 40)
       ,
       #cluster = ~geocode4_corr + ind2#
       vcov = 'iid'
@@ -3066,11 +2989,11 @@ t6 <- feols(log(tcod) ~
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint + 
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_totalBranchCity) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_hhi_branches * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
-      df_soe %>% filter(tcod > 300)
-      ,
+      df_soe %>%filter(ind2 %in% list_polluting) %>%filter(tcod > 40)
+      , 
       #cluster = ~geocode4_corr + ind2#
       vcov = 'iid'
               )
@@ -3078,10 +3001,10 @@ t7 <- feols(log(tcod) ~
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint + 
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_totalBranchCity) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_hhi_branches * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
-      df_priv %>% filter(tcod > 300)
+      df_priv %>%filter(!ind2 %in% list_polluting) %>%filter(tcod > 40)
       ,
       #cluster = ~geocode4_corr + ind2#
       vcov = 'iid'
@@ -3092,10 +3015,10 @@ t8 <- feols(log(twaste_water) ~
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint +  
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_concentration_sob_ct) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_count_ccb * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
-      df_soe %>%filter(twaste_water > 100)
+      df_soe%>%filter(ind2 %in% list_polluting)  %>%filter(twaste_water > 0)
       ,
       #cluster = ~geocode4_corr + ind2#
       vcov = 'iid'
@@ -3104,10 +3027,10 @@ t9 <- feols(log(twaste_water) ~
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint +  
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_concentration_sob_ct) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_count_ccb * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
-      df_priv %>%filter(twaste_water > 100)
+      df_priv%>%filter(!ind2 %in% list_polluting)  %>%filter(twaste_water > 0)
       ,
       #cluster = ~geocode4_corr + ind2#
       vcov = 'iid'
@@ -3116,10 +3039,10 @@ t10 <- feols(log(twaste_water) ~
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint +  
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_totalBranchCity) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_hhi_branches * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
-      df_soe %>% filter(twaste_water > 100)
+      df_soe %>%filter(ind2 %in% list_polluting) %>%filter(twaste_water > 0)
       ,
       #cluster = ~geocode4_corr + ind2#
       vcov = 'iid'
@@ -3128,10 +3051,10 @@ t11 <- feols(log(twaste_water) ~
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint +  
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_totalBranchCity) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_hhi_branches * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
-      df_priv %>% filter(twaste_water > 100)
+      df_priv %>%filter(!ind2 %in% list_polluting) %>%filter(twaste_water > 0)
       ,
       #cluster = ~geocode4_corr + ind2#
       vcov = 'iid'
@@ -3146,6 +3069,167 @@ etable(t0,t1, t2,t3, t4,t5,t6,t7, t8, t9, t10, t11,
        digits = 3,
       digits.stats = 3
       )
+```
+
+<!-- #region kernel="R" -->
+Foreign vs dom
+<!-- #endregion -->
+
+```sos kernel="R"
+df_for <- df_final %>% inner_join(read_csv('list_city_for_output_0.5.csv'))
+df_dom <- df_final %>% left_join(read_csv('list_city_for_output_0.5.csv')) %>% filter(is.na(share_for))
+t0 <- feols(log(tso2) ~  
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint + 
+            lag_credit_supply_long_term * credit_constraint +
+            lag_count_ccb * credit_constraint
+           | fe_t_i + fe_c_t + fe_c_i,
+      df_for %>%filter(ind2 %in% list_polluting) %>%filter(tso2 > 0)
+      ,
+      #cluster = ~geocode4_corr + ind2#
+      vcov = 'iid'
+              )
+
+
+t1 <- feols(log(tso2) ~  
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint + 
+            lag_credit_supply_long_term * credit_constraint +
+            lag_count_ccb * credit_constraint
+           | fe_t_i + fe_c_t + fe_c_i,
+      df_dom%>%filter(!ind2 %in% list_polluting)  %>%filter(tso2 > 0)
+      , 
+      #cluster = ~geocode4_corr + ind2#
+      vcov = 'iid'
+              )
+
+t2 <- feols(log(tso2) ~  
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint + 
+            lag_credit_supply_long_term * credit_constraint +
+            lag_hhi_branches * credit_constraint
+           | fe_t_i + fe_c_t + fe_c_i,
+      df_for %>%filter(ind2 %in% list_polluting) %>%filter(tso2 > 0)
+      ,
+      #cluster = ~geocode4_corr + ind2#
+      vcov = 'iid'
+              )
+
+t3 <- feols(log(tso2) ~  
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint + 
+            lag_credit_supply_long_term * credit_constraint +
+            lag_hhi_branches * credit_constraint
+           | fe_t_i + fe_c_t + fe_c_i,
+      df_dom %>%filter(!ind2 %in% list_polluting) %>%filter(tso2 > 0)
+      ,
+      #cluster = ~geocode4_corr + ind2#
+      vcov = 'iid'
+              )
+
+###### TCOD
+t4 <- feols(log(tcod) ~  
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint +  
+            lag_credit_supply_long_term * credit_constraint +
+            lag_count_ccb * credit_constraint
+           | fe_t_i + fe_c_t + fe_c_i,
+      df_for%>%filter(ind2 %in% list_polluting)  %>%filter(tcod > 40)
+      ,
+      #cluster = ~geocode4_corr + ind2#
+      vcov = 'iid'
+              )
+t5 <- feols(log(tcod) ~  
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint +  
+            lag_credit_supply_long_term * credit_constraint +
+            lag_count_ccb * credit_constraint
+           | fe_t_i + fe_c_t + fe_c_i,
+      df_dom %>%filter(!ind2 %in% list_polluting) %>%filter(tcod > 40)
+      ,
+      #cluster = ~geocode4_corr + ind2#
+      vcov = 'iid'
+              )
+t6 <- feols(log(tcod) ~  
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint + 
+            lag_credit_supply_long_term * credit_constraint +
+            lag_hhi_branches * credit_constraint
+           | fe_t_i + fe_c_t + fe_c_i,
+      df_for %>%filter(ind2 %in% list_polluting) %>%filter(tcod > 40)
+      , 
+      #cluster = ~geocode4_corr + ind2#
+      vcov = 'iid'
+              )
+t7 <- feols(log(tcod) ~  
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint + 
+            lag_credit_supply_long_term * credit_constraint +
+            lag_hhi_branches * credit_constraint
+           | fe_t_i + fe_c_t + fe_c_i,
+      df_dom %>%filter(!ind2 %in% list_polluting) %>%filter(tcod > 40)
+      ,
+      #cluster = ~geocode4_corr + ind2#
+      vcov = 'iid'
+              )
+
+###### TWASTE WATER
+t8 <- feols(log(twaste_water) ~  
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint +  
+            lag_credit_supply_long_term * credit_constraint +
+            lag_count_ccb * credit_constraint
+           | fe_t_i + fe_c_t + fe_c_i,
+      df_for%>%filter(ind2 %in% list_polluting)  %>%filter(twaste_water > 0)
+      ,
+      #cluster = ~geocode4_corr + ind2#
+      vcov = 'iid'
+              )
+t9 <- feols(log(twaste_water) ~  
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint +  
+            lag_credit_supply_long_term * credit_constraint +
+            lag_count_ccb * credit_constraint
+           | fe_t_i + fe_c_t + fe_c_i,
+      df_dom%>%filter(!ind2 %in% list_polluting)  %>%filter(twaste_water > 0)
+      ,
+      #cluster = ~geocode4_corr + ind2#
+      vcov = 'iid'
+              )
+t10 <- feols(log(twaste_water) ~  
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint +  
+            lag_credit_supply_long_term * credit_constraint +
+            lag_hhi_branches * credit_constraint
+           | fe_t_i + fe_c_t + fe_c_i,
+      df_for %>%filter(ind2 %in% list_polluting) %>%filter(twaste_water > 0)
+      ,
+      #cluster = ~geocode4_corr + ind2#
+      vcov = 'iid'
+              )
+t11 <- feols(log(twaste_water) ~  
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint +  
+            lag_credit_supply_long_term * credit_constraint +
+            lag_hhi_branches * credit_constraint
+           | fe_t_i + fe_c_t + fe_c_i,
+      df_dom %>%filter(!ind2 %in% list_polluting) %>%filter(twaste_water > 0)
+      ,
+      #cluster = ~geocode4_corr + ind2#
+      vcov = 'iid'
+              )
 ```
 
 <!-- #region kernel="R" -->
@@ -3177,13 +3261,12 @@ etable(t0,t1, t2,t3, t4,t5,t6,t7, t8, t9, t10, t11,
 
 ```sos kernel="R"
 summary(feols(
-    log(tdso2_equip+1)  ~  
+    tdso2_equip  ~  
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint +
-            #log(lag_credit_supply_long_term) * credit_constraint+
-            #log(lag_concentration_sob_ct) * credit_constraint 
-    city_commercial_bank * credit_constraint
+            lag_credit_supply_long_term * credit_constraint+
+            lag_count_ccb * credit_constraint 
            | fe_t_i + fe_c_t + fe_c_i,
       df_final %>% inner_join(df_final %>%filter(tso2 > 0) %>% select(...1)), 
       #cluster = ~geocode4_corr + ind2#
@@ -3192,104 +3275,29 @@ summary(feols(
 ```
 
 ```sos kernel="R"
-summary(feols(
-    log(tdso2_equip+1)  ~  
+feols(dwastewater_equip ~  
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint +
-            log(lag_credit_supply_long_term) * credit_constraint+
-            log(lag_totalBranchCity) * credit_constraint 
+            lag_credit_supply_long_term * credit_constraint +
+            lag_count_ccb * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>% inner_join(df_final %>%filter(tso2 > 0) %>% select(...1)), 
-      #cluster = ~geocode4_corr + ind2#
-      vcov = 'iid'
-              ))
-```
-
-```sos kernel="R"
-summary(feols(
-    log(tdso2_equip+1)  ~  
-            log(output) + log(employment) + log(capital) + 
-            log(gdp_pop) * credit_constraint +
-            log(fdi_gdp) * credit_constraint +
-    city_commercial_bank * credit_constraint * tcz
-            #log(lag_credit_supply_long_term) * credit_constraint * tcz+
-            #log(lag_concentration_sob_ct) * credit_constraint * tcz
-           | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>% inner_join(df_final %>%filter(tso2 > 0) %>% select(...1)), 
-      #cluster = ~geocode4_corr + ind2#
-      vcov = 'iid'
-              ))
-```
-
-```sos kernel="R"
-summary(feols(
-    log(tdso2_equip+1)  ~  
-            log(output) + log(employment) + log(capital) + 
-            log(gdp_pop) * credit_constraint +
-            log(fdi_gdp) * credit_constraint +
-            log(lag_credit_supply_long_term) * credit_constraint * tcz+
-            log(lag_totalBranchCity) * credit_constraint * tcz
-           | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>% inner_join(df_final %>%filter(tso2 > 0) %>% select(...1)), 
-      #cluster = ~geocode4_corr + ind2#
-      vcov = 'iid'
-              ))
-```
-
-```sos kernel="R"
-feols(log(dwastewater_equip+1) ~  
-            log(output) + log(employment) + log(capital) + 
-            log(gdp_pop) * credit_constraint +
-            log(fdi_gdp) * credit_constraint +
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_concentration_sob_ct) * credit_constraint
-           | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>% inner_join(df_final %>%filter(twaste_water > 100) %>% select(...1)),
+      df_final %>% inner_join(df_final %>%filter(twaste_water > 0) %>% select(...1)),
       #cluster = ~geocode4_corr + ind2#
       vcov = 'iid'
               )
 ```
 
 ```sos kernel="R"
-feols(log(dwastewater_equip+1) ~  
+feols(tdwastegas_equip ~  
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint +
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_totalBranchCity) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_count_ccb * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>% inner_join(df_final %>%filter(twaste_water > 100) %>% select(...1))
+      df_final %>% inner_join(df_final %>%filter(twaste_water > 0) %>% select(...1))
       ,
-      #cluster = ~geocode4_corr + ind2#
-      vcov = 'iid'
-              )
-```
-
-```sos kernel="R"
-feols(log(tdwastegas_equip+1) ~  
-            log(output) + log(employment) + log(capital) + 
-            log(gdp_pop) * credit_constraint +
-            log(fdi_gdp) * credit_constraint +
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_concentration_sob_ct) * credit_constraint
-           | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>% inner_join(df_final %>%filter(twaste_water > 100) %>% select(...1))
-      ,
-      #cluster = ~geocode4_corr + ind2#
-      vcov = 'iid'
-              )
-```
-
-```sos kernel="R"
-feols(log(tdwastegas_equip+1) ~  
-            log(output) + log(employment) + log(capital) + 
-            log(gdp_pop) * credit_constraint +
-            log(fdi_gdp) * credit_constraint +
-            log(lag_credit_supply_long_term) * credit_constraint+
-            log(lag_totalBranchCity) * credit_constraint 
-           | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>% inner_join(df_final %>%filter(twaste_water > 100) %>% select(...1)),
       #cluster = ~geocode4_corr + ind2#
       vcov = 'iid'
               )
@@ -3308,106 +3316,23 @@ feols(log(tdwastegas_equip+1) ~
  • innovation_index
 <!-- #endregion -->
 
-```sos kernel="R"
-feols(log(total_industrialwater_used) ~  
-            log(output) + log(employment) + log(capital) + 
-            log(gdp_pop) * credit_constraint +
-            log(fdi_gdp) * credit_constraint +
-            log(city_commercial_bank +1) * credit_constraint
-            #log(lag_credit_supply_long_term) * credit_constraint +
-            #log(lag_concentration_sob_ct) * credit_constraint
-           | fe_t_i +fe_c_t,
-      df_final #%>% filter(total_industrialwater_used >100) #%>% inner_join(df_final %>%filter(twaste_water > 300) %>% select(...1))
-      #%>% mutate(total_industrialwater_used = ifelse(is.na(total_industrialwater_used), 0, total_industrialwater_used))
-      ,
-      #cluster = ~geocode4_corr + ind2#
-      vcov = 'iid'
-              )
-```
-
-```sos kernel="SoS"
-df_bank_dereg_final.columns
-```
-
-```sos kernel="R"
-feols(log(total_industrialwater_used_o) ~  
-            log(output) + log(employment) + log(capital) + 
-            log(gdp_pop) * credit_constraint +
-            log(fdi_gdp) * credit_constraint +
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_concentration_sob_ct) * credit_constraint
-           | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>% inner_join(df_final %>%filter(twaste_water > 100) %>% select(...1)) %>% mutate(total_industrialwater_used_o = total_industrialwater_used/output) %>%filter(twaste_water > 100)
-      ,
-      #cluster = ~geocode4_corr + ind2#
-      vcov = 'iid'
-              )
-```
-
-```sos kernel="R"
-feols(log(total_industrialwater_used_o) ~  
-            log(output) + log(employment) + log(capital) + 
-            log(gdp_pop) * credit_constraint +
-            log(fdi_gdp) * credit_constraint +
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_city_commercial_bank+1) * credit_constraint
-           | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>% 
-      inner_join(df_final %>%filter(twaste_water > 100) %>% select(...1)) %>%
-      mutate(total_industrialwater_used_o = total_industrialwater_used/output)%>%filter(twaste_water > 100) %>%
-      filter(year > 2000)
-      ,
-      #cluster = ~geocode4_corr #+ ind2#
-      vcov = 'iid'
-              )
-```
-
 <!-- #region kernel="R" -->
 Fresh water
 <!-- #endregion -->
 
 ```sos kernel="R"
-feols(log(total_freshwater_used) ~  
+feols(log(total_freshwater_used_o) ~  
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint +
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_concentration_sob_ct) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_count_ccb * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>% inner_join(df_final %>%filter(twaste_water > 100) %>% select(...1))%>%filter(twaste_water > 100)
+      df_final %>% inner_join(df_final %>%filter(tcod > 40) %>% select(...1)) %>% 
+      mutate(total_freshwater_used_o = total_freshwater_used/sales) 
       ,
-      #cluster = ~geocode4_corr + ind2#
-      vcov = 'iid'
-              )
-```
-
-```sos kernel="R"
-feols(log(total_freshwater_used) ~  
-            log(output) + log(employment) + log(capital) + 
-            log(gdp_pop) * credit_constraint +
-            log(fdi_gdp) * credit_constraint +
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_city_commercial_bank) * credit_constraint
-           | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>% inner_join(df_final %>%filter(twaste_water > 100) %>% select(...1)) %>%filter(twaste_water > 100)
-      ,
-      #cluster = ~geocode4_corr + ind2#
-      vcov = 'iid'
-              )
-```
-
-```sos kernel="R"
-feols(log(total_freshwater_used_used_o) ~  
-            log(output) + log(employment) + log(capital) + 
-            log(gdp_pop) * credit_constraint +
-            log(fdi_gdp) * credit_constraint +
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_concentration_sob_ct) * credit_constraint
-           | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>% inner_join(df_final %>%filter(twaste_water > 100) %>% select(...1)) %>% mutate(total_freshwater_used_used_o = total_freshwater_used/output)%>%filter(twaste_water > 100)
-      ,
-      #cluster = ~geocode4_corr + ind2#
-      vcov = 'iid'
+      cluster = ~geocode4_corr + ind2#
+      #vcov = 'iid'
               )
 ```
 
@@ -3416,77 +3341,14 @@ feols(log(total_freshwater_used_o) ~
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint +
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_city_commercial_bank) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_hhi_branches * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>% inner_join(df_final %>%filter(twaste_water > 100) %>% select(...1))  %>% mutate(total_freshwater_used_o = total_freshwater_used/output) %>%filter(twaste_water > 100)
+      df_final %>% inner_join(df_final %>%filter(tcod > 40) %>% select(...1)) %>% 
+      mutate(total_freshwater_used_o = total_freshwater_used/sales) 
       ,
-      #cluster = ~geocode4_corr + ind2#
-      vcov = 'iid'
-              )
-```
-
-<!-- #region kernel="R" -->
-Coal
-<!-- #endregion -->
-
-```sos kernel="R"
-feols(log(tylmxf) ~  
-            log(output) + log(employment) + log(capital) + 
-            log(gdp_pop) * credit_constraint +
-            log(fdi_gdp) * credit_constraint +
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_concentration_sob_ct) * credit_constraint
-           | fe_t_i + fe_c_t + fe_c_i,
-      df_final 
-      ,
-      #cluster = ~geocode4_corr + ind2#
-      vcov = 'iid'
-              )
-```
-
-```sos kernel="R"
-feols(log(tylmxf) ~  
-            log(output) + log(employment) + log(capital) + 
-            log(gdp_pop) * credit_constraint +
-            log(fdi_gdp) * credit_constraint +
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_city_commercial_bank) * credit_constraint
-           | fe_t_i + fe_c_t + fe_c_i,
-      df_final
-      ,
-      #cluster = ~geocode4_corr + ind2#
-      vcov = 'iid'
-              )
-```
-
-```sos kernel="R"
-feols(log(tylmxf_o) ~  
-            log(output) + log(employment) + log(capital) + 
-            log(gdp_pop) * credit_constraint +
-            log(fdi_gdp) * credit_constraint +
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_concentration_sob_ct) * credit_constraint
-           | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>% mutate(tylmxf_o = tylmxf/output) %>%filter(twaste_water > 100)
-      ,
-      #cluster = ~geocode4_corr + ind2#
-      vcov = 'iid'
-              )
-```
-
-```sos kernel="R"
-feols(log(tylmxf_o) ~  
-            log(output) + log(employment) + log(capital) + 
-            log(gdp_pop) * credit_constraint +
-            log(fdi_gdp) * credit_constraint +
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_totalBranchCity) * credit_constraint
-           | fe_t_i + fe_c_t + fe_c_i,
-      df_final%>% mutate(tylmxf_o = tylmxf/output) %>%filter(twaste_water > 100)
-      ,
-      #cluster = ~geocode4_corr + ind2#
-      vcov = 'iid'
+      cluster = ~geocode4_corr + ind2#
+      #vcov = 'iid'
               )
 ```
 
@@ -3495,14 +3357,15 @@ Innovation index
 <!-- #endregion -->
 
 ```sos kernel="R"
-feols(log(innovation_index+1) ~  
+feols(innovation_index ~  
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint +
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_concentration_sob_ct) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_count_ccb * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
       df_final %>% mutate(innovation_index = ifelse(is.na(innovation_index), 0, innovation_index))
+      %>% inner_join(df_final %>%filter(tcod > 40) %>% select(...1))
       ,
       #cluster = ~geocode4_corr + ind2#
       vcov = 'iid'
@@ -3510,18 +3373,15 @@ feols(log(innovation_index+1) ~
 ```
 
 ```sos kernel="R"
-
-```
-
-```sos kernel="R"
-feols(rd_to_tota_asset ~  
+feols(innovation_index ~  
             log(output) + log(employment) + log(capital) + 
             log(gdp_pop) * credit_constraint +
             log(fdi_gdp) * credit_constraint +
-            log(lag_credit_supply_long_term) * credit_constraint +
-            log(lag_totalBranchCity) * credit_constraint
+            lag_credit_supply_long_term * credit_constraint +
+            lag_hhi_branches * credit_constraint
            | fe_t_i + fe_c_t + fe_c_i,
       df_final %>% mutate(innovation_index = ifelse(is.na(innovation_index), 0, innovation_index))
+      %>% inner_join(df_final %>%filter(tcod > 40) %>% select(...1))
       ,
       #cluster = ~geocode4_corr + ind2#
       vcov = 'iid'
@@ -3582,25 +3442,6 @@ df_size  = (s3.run_query(
         )
                 )
 df_size.head()
-```
-
-```sos kernel="SoS"
- (
-            df_size.groupby(["year", "indu_2",'geocode4_corr'])
-            .agg("sum")
-            .groupby(["year",'geocode4_corr'])
-            .agg(
-                {
-                    "output": ["mean", "median"],
-                    "employment": ["mean", "median"],
-                    "capital": ["mean", "median"],
-                    "sales": ["mean", "median"],
-                    "toasset": ["mean", "median"],
-                }
-            )
-            .reset_index()
-            .collapse_levels(sep="_")
-        )
 ```
 
 ```sos kernel="SoS"
@@ -3697,6 +3538,10 @@ temp.head()
 for i in ['output','employment','capital','sales', 'toasset']:
     for j in ['mean', 'median','75']:
         print(temp["large_{}_{}".format(i, j)].value_counts())
+```
+
+```sos kernel="SoS"
+df_bank_dereg_final.columns
 ```
 
 <!-- #region kernel="R" heading_collapsed="true" -->
