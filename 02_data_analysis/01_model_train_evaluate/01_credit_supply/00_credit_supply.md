@@ -1283,6 +1283,8 @@ x1 = (
         )
     .groupby(['year'])
     .agg({'active':'sum'})
+    .loc[lambda x: x.index > "1997"]
+    .loc[lambda x: x.index < "2008"]
     #.plot
     #.line(title = 'Accumulation CCB over time',figsize=(10,6))
     #.legend(loc='center left',bbox_to_anchor=(1.0, 0.5)) 
@@ -1309,7 +1311,14 @@ x2 = (
         )
     .groupby(['year'])
     .agg({'count':'sum'})
+    .loc[lambda x: x.index > "1997"]
+    .loc[lambda x: x.index < "2008"]
 )
+```
+
+```sos kernel="SoS"
+sns.set()
+sns.set_style("white")
 ```
 
 ```sos kernel="SoS"
@@ -1320,7 +1329,10 @@ ax2 = ax1.twinx()
 l2, = ax2.plot(x2, color='orange')
 
 plt.legend([l1, l2], ["Nb of CCB", "Nb of branches"],loc='center left',bbox_to_anchor=(1.1, .9))
-plt.show()
+#plt.show()
+plt.savefig("Figures/fig_7.png",
+            bbox_inches='tight',
+            dpi=600)
 ```
 
 <!-- #region kernel="SoS" -->
@@ -1356,13 +1368,15 @@ test = (
             active = lambda x: np.where(x['count']> 0,1, 0)
         )
     .groupby(['province_en', 'year'])
-    .agg({'active':'sum'}) 
+    .agg({'count':'sum'}) 
     .reset_index()
     .assign(
-    mx_ = lambda x: x.groupby(['province_en'])['active'].transform('max')
+    mx_ = lambda x: x.groupby(['province_en'])['count'].transform('max')
     )
     .sort_values(by = ['mx_','province_en', 'year'], ascending= True)
     .drop(columns ='mx_')
+    .loc[lambda x: x['year'] > "1997"]
+    .loc[lambda x: x['year'] < "2008"]
 )
 test.head()
 ```
@@ -1374,7 +1388,7 @@ z = (
     test
     .set_index(['province_en', 'year'])
     .unstack()
-    .sort_values(by = [('active','2022')], ascending = False)
+    .sort_values(by = [('count','2007')], ascending = False)
     .to_numpy()
     .astype(float)
 )
@@ -1382,14 +1396,14 @@ y_tick = list(
     test
     .set_index(['province_en', 'year'])
     .unstack()
-    .sort_values(by = [('active','2022')], ascending = False)
+    .sort_values(by = [('count','2007')], ascending = False)
     .index
 )
 x_tick = list(
     test
     .set_index(['province_en', 'year'])
     .unstack()
-    .sort_values(by = [('active','2022')], ascending = False)
+    .sort_values(by = [('count','2007')], ascending = False)
     .droplevel(axis =1, level=0)
     .columns
 )
@@ -1404,11 +1418,14 @@ ax = fig.add_subplot(111,projection='3d')
 ax.plot_surface(y,x,z,cmap=cm.coolwarm)
 ax.view_init(30, 150)
 ax.set_xticks(ticks = np.arange(0, len(x_tick)))
-ax.set_xticklabels(x_tick,rotation=70, fontsize = 7)
+ax.set_xticklabels([i if i in x_tick[::2] else '' for i in x_tick],rotation=70, fontsize = 7)
 ax.set_yticks(ticks = np.arange(0, len(y_tick)))
 ax.set_yticklabels(y_tick,rotation=90, fontsize = 7)
-plt.title('Number of CCB per year and province in China')
-plt.show()
+#plt.title('Number of CCB per year and province in China')
+#plt.show()
+plt.savefig("Figures/fig_6.png",
+            bbox_inches='tight',
+            dpi=600)
 ```
 
 <!-- #region kernel="SoS" -->
@@ -1762,18 +1779,90 @@ df_deregulation.shape
 ```
 
 ```sos kernel="SoS"
-(
+graph = (
     df_deregulation
     .groupby("year")
     .agg({
         "hhi_branches": "mean",
-        "concentration":"mean",
+        #"concentration":"mean",
         #'share_branch':'mean'
     })
-    .plot.line(title="concentration SOB", figsize=(15, 10))
-    .legend(loc="center left", bbox_to_anchor=(1.0, 0.5))
+    .rename(columns = {'hhi_branches':'banking deregulation index'})
+    .loc[lambda x: x.index < "2008"]
+    #.plot.line(
+        #title="concentration SOB",
+    #    figsize=(15, 10))
+    #.legend(loc="center left", bbox_to_anchor=(1.0, 0.5))
 )
-plt.show()
+graph
+#plt.show()
+```
+
+```sos kernel="SoS"
+(
+    graph
+    .assign(
+    pct_change = lambda x: x['banking deregulation index'].pct_change()
+    )
+    #.mean() *100
+)
+```
+
+```sos kernel="SoS"
+query = """
+SELECT * 
+FROM "almanac_bank_china"."province_loan_and_credit"
+LEFT JOIN (
+SELECT province_en, larger_location, coastal
+FROM "chinese_lookup"."geo_chinese_province_location"
+) as prov on province_loan_and_credit.province_en = prov.province_en
+"""
+df_credit = (
+    s3.run_query(
+            query=query,
+            database=db,
+            s3_output='SQL_OUTPUT_ATHENA',
+            filename='fig_2',  # Add filename to print dataframe
+            destination_key='SQL_OUTPUT_ATHENA/CSV',  #Use it temporarily
+            dtype = {'year':'string', 'fin_dep':'float'}
+)
+    .groupby(['year'])
+    .agg(
+        {
+            'total_long_term_loan':'sum',
+            'total_gdp':'sum',
+            
+        })
+    .assign(
+        supply_long_term = lambda x: x['total_long_term_loan']/x['total_gdp'],
+    )
+    .drop(columns = ['total_long_term_loan','total_gdp'])
+    .loc[lambda x: x.index > 1997]
+)
+df_credit
+```
+
+```sos kernel="SoS"
+fig, ax = plt.subplots(figsize=(10, 8))
+ax.plot(df_credit.index,
+              df_credit['supply_long_term'],label = 'Supply of long term credit')
+ax.set_ylabel("Share of long term credit supply over GDP")
+ax2 = ax.twinx()
+ax2.plot(df_credit.index,
+               graph['banking deregulation index'], color ='green',label = 'banking deregulation index')
+ax2.set_ylabel("Number of city branches")
+plt.xlabel('Year')
+plt.ylabel("banking deregulation index")
+#ax.spines['right'].set_visible(False)
+#ax.spines['top'].set_visible(False)
+ax.legend(bbox_to_anchor=(1.08, 1), loc=2, borderaxespad=0.)
+ax2.legend(bbox_to_anchor=(1.08, .9), loc=2, borderaxespad=0.)
+plt.xticks(df_credit.index,rotation=30)
+#plt.title('Evolution of share of non-state bank in total loan')
+#plt.show()
+plt.savefig("Figures/fig_5.png",
+            bbox_inches='tight',
+            dpi=600)
 ```
 
 <!-- #region kernel="SoS" -->
@@ -1874,30 +1963,6 @@ df_bank_dereg_final.isna().sum().loc[lambda x: x>0].sort_values()
 #    )   
 #)
 ```
-
-<!-- #region kernel="SoS" nteract={"transient": {"deleting": false}} -->
-## Schema Latex table
-
-To rename a variable, please use the following template:
-
-```
-{
-    'old':'XX',
-    'new':'XX_1'
-    }
-```
-
-if you need to pass a latex format with `\`, you need to duplicate it for instance, `\text` becomes `\\text:
-
-```
-{
-    'old':'working\_capital\_i',
-    'new':'\\text{working capital}_i'
-    }
-```
-
-Then add it to the key `to_rename`
-<!-- #endregion -->
 
 ```sos kernel="SoS"
 #sys.path.append(os.path.join(parent_path, 'utils'))
@@ -2599,10 +2664,6 @@ for ext in ['.txt', '.pdf']:
 ```
 
 ```sos kernel="R"
-print(dim(df_for)[1] + dim(df_dom)[1] == dim(df_final)[1])
-```
-
-```sos kernel="R"
 %get path table
 df_soe <- df_final %>% inner_join(read_csv('list_city_soe_output_0.4.csv'))
 df_priv <- df_final %>% left_join(read_csv('list_city_soe_output_0.4.csv')) %>% filter(is.na(share_soe))
@@ -3003,191 +3064,7 @@ etable(t0,t1, t2,t3, t4,t5,t6,t7, t8, t9, t10, t11,
 - tdso2_equip
 - tdwastegas_equip
 - dwastewater_equip
-- tdwastegas_equip_output
-- tdso2_equip_output
 <!-- #endregion -->
-
-```sos kernel="R"
-t0 <- feols(
-    log(tdso2_equip+1)  ~  
-            log(output) + log(employment) + log(capital) + 
-            log(gdp_pop) * credit_constraint +
-            log(fdi_gdp) * credit_constraint +
-            lag_credit_supply_long_term * credit_constraint+
-            lag_count_ccb * credit_constraint 
-           | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>% inner_join(df_final %>%filter(tso2 > 0) %>% select(...1)), 
-      #cluster = ~geocode4_corr + ind2#
-      vcov = 'iid'
-              )
-```
-
-```sos kernel="R"
-t1 <- feols(
-    log(tdso2_equip+1)  ~  
-            log(output) + log(employment) + log(capital) + 
-            log(gdp_pop) * credit_constraint +
-            log(fdi_gdp) * credit_constraint +
-            lag_credit_supply_long_term * credit_constraint+
-            lag_hhi_branches * credit_constraint 
-           | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>% inner_join(df_final %>%filter(tso2 > 0) %>% select(...1)), 
-      #cluster = ~geocode4_corr + ind2#
-      vcov = 'iid'
-              )
-```
-
-```sos kernel="R"
-t2 <- feols(log(dwastewater_equip+1) ~  
-            log(output) + log(employment) + log(capital) + 
-            log(gdp_pop) * credit_constraint +
-            log(fdi_gdp) * credit_constraint +
-            lag_credit_supply_long_term * credit_constraint +
-            lag_count_ccb * credit_constraint
-           | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>% inner_join(df_final %>%filter(twaste_water > 0) %>% select(...1)),
-      #cluster = ~geocode4_corr + ind2#
-      vcov = 'iid'
-              )
-```
-
-```sos kernel="R"
-t3 <- feols(log(dwastewater_equip+1) ~  
-            log(output) + log(employment) + log(capital) + 
-            log(gdp_pop) * credit_constraint +
-            log(fdi_gdp) * credit_constraint +
-            lag_credit_supply_long_term * credit_constraint +
-            lag_hhi_branches * credit_constraint
-           | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>% inner_join(df_final %>%filter(twaste_water > 0) %>% select(...1)),
-      #cluster = ~geocode4_corr + ind2#
-      vcov = 'iid'
-              )
-```
-
-```sos kernel="R"
-t4 <- feols(log(tdwastegas_equip+1) ~  
-            log(output) + log(employment) + log(capital) + 
-            log(gdp_pop) * credit_constraint +
-            log(fdi_gdp) * credit_constraint +
-            lag_credit_supply_long_term * credit_constraint +
-            lag_count_ccb * credit_constraint
-           | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>% inner_join(df_final %>%filter(twaste_water > 0) %>% select(...1))
-      ,
-      #cluster = ~geocode4_corr + ind2#
-      vcov = 'iid'
-              )
-```
-
-```sos kernel="R"
-t5 <- feols(log(tdwastegas_equip+1) ~  
-            log(output) + log(employment) + log(capital) + 
-            log(gdp_pop) * credit_constraint +
-            log(fdi_gdp) * credit_constraint +
-            lag_credit_supply_long_term * credit_constraint +
-            lag_hhi_branches * credit_constraint
-           | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>% inner_join(df_final %>%filter(twaste_water > 0) %>% select(...1))
-      ,
-      #cluster = ~geocode4_corr + ind2#
-      vcov = 'iid'
-              )
-```
-
-<!-- #region kernel="R" -->
-### Technology upgrading
-
- • 'total_industrialwater_used',
- • 'total_freshwater_used',
- • 'total_repeatedwater_used',
- • 'total_coal_used',
- • 'clean_gas_used'
- • 'trlmxf',
- • 'tylmxf'
- • innovation_index
-<!-- #endregion -->
-
-<!-- #region kernel="R" -->
-Fresh water
-<!-- #endregion -->
-
-```sos kernel="R"
-t0 <- feols(log(total_freshwater_used_o) ~  
-            log(output) + log(employment) + log(capital) + 
-            log(gdp_pop) * credit_constraint +
-            log(fdi_gdp) * credit_constraint +
-            lag_credit_supply_long_term * credit_constraint +
-            lag_count_ccb * credit_constraint
-           | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>% inner_join(df_final %>%filter(tcod > 40) %>% select(...1)) %>% 
-      mutate(total_freshwater_used_o = total_freshwater_used/sales) 
-      ,
-      cluster = ~geocode4_corr + ind2#
-      #vcov = 'iid'
-              )
-```
-
-```sos kernel="R"
-t01 <- feols(log(total_freshwater_used_o) ~  
-            log(output) + log(employment) + log(capital) + 
-            log(gdp_pop) * credit_constraint +
-            log(fdi_gdp) * credit_constraint +
-            lag_credit_supply_long_term * credit_constraint +
-            lag_hhi_branches * credit_constraint
-           | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>% inner_join(df_final %>%filter(tcod > 40) %>% select(...1)) %>% 
-      mutate(total_freshwater_used_o = total_freshwater_used/sales) 
-      ,
-      cluster = ~geocode4_corr + ind2#
-      #vcov = 'iid'
-              )
-```
-
-<!-- #region kernel="R" -->
-Innovation index
-<!-- #endregion -->
-
-```sos kernel="SoS"
-df_bank_dereg_final['twaste_water'].describe(percentiles = np.arange(0,1, .05))
-```
-
-```sos kernel="R"
-feols(log(innovation_index+1) ~ 
-            log(output) + log(employment) + log(capital) + 
-            log(gdp_pop) * credit_constraint +
-            log(fdi_gdp) * credit_constraint +
-            lag_credit_supply_long_term * credit_constraint +
-            lag_count_ccb * credit_constraint
-           | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>% filter(!year %in% c('1998','1999','2000'))  
-      #%>% mutate(
-      #  innovation_index = ifelse(is.na(innovation_index), 0, innovation_index))
-      #%>%filter(tcod < 1.309234e+07)
-      ,
-      #cluster = ~geocode4_corr + ind2#
-      vcov = 'iid'
-              )
-```
-
-```sos kernel="R"
-feols(innovation_index ~ 
-            log(output) + log(employment) + log(capital) + 
-            log(gdp_pop) * credit_constraint +
-            log(fdi_gdp) * credit_constraint +
-            lag_credit_supply_long_term * credit_constraint +
-            lag_hhi_branches * credit_constraint
-           | fe_t_i + fe_c_t + fe_c_i,
-      df_final %>%
-      filter(!year %in% c('1998','1999','2000'))  
-      %>% mutate(
-        innovation_index = ifelse(is.na(innovation_index), 0, innovation_index))
-     # %>%filter(tso2 > 0)
-      ,
-      #cluster = ~geocode4_corr + ind2#
-      vcov = 'iid'
-              )
-```
 
 ```sos kernel="SoS"
 query = """
@@ -3246,7 +3123,7 @@ temp = (
     df_size.groupby([
         "year",
         "indu_2",
-        'geocode4_corr'
+        #'geocode4_corr'
     ])
     .agg(
         {
@@ -3262,12 +3139,13 @@ temp = (
     .merge(
         (
             df_size.groupby([
-                "year", "indu_2"
-                ,'geocode4_corr'
+                "year",
+                "indu_2",
+                #'geocode4_corr'
                             ])
             .agg("sum")
-            .groupby(["year"
-                      ,'geocode4_corr'
+            .groupby(["year",
+                      #'geocode4_corr'
                      ])
             .agg(
                 {
@@ -3284,12 +3162,15 @@ temp = (
     )
     .merge(
      (
-            df_size.groupby(["year", "indu_2"
-                             ,'geocode4_corr'
+            df_size.groupby([
+                "year",
+                "indu_2",
+                #'geocode4_corr'
                             ])
             .agg("sum")
-            .groupby(["year"
-                      ,'geocode4_corr'
+            .groupby([
+                "year",
+                #'geocode4_corr'
                      ])
             .quantile(.75)
             .reset_index()
@@ -3323,7 +3204,7 @@ temp = (
         }
     )
     .drop(columns = [
-        #'geocode4_corr',
+        'geocode4_corr',
         'output', 'employment', 'capital', 'sales', 'toasset'])
     .rename(columns = {'indu_2':'ind2'})
 )
@@ -3332,13 +3213,364 @@ temp.head()
 ```
 
 ```sos kernel="SoS"
-for i in ['output','employment','capital','sales', 'toasset']:
-    for j in ['mean', 'median','75']:
-        print(temp["large_{}_{}".format(i, j)].value_counts())
+t0 <- feols(
+    tdso2_equip  ~  
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint +
+            lag_credit_supply_long_term * credit_constraint+
+            lag_count_ccb * credit_constraint 
+           | fe_t_i + fe_c_t + fe_c_i,
+      df_final %>% inner_join(df_final %>%filter(tso2 > 0) %>% select(...1)), 
+      #cluster = ~geocode4_corr + ind2#
+      vcov = 'iid'
+              )
 ```
 
-```sos kernel="SoS"
-df_bank_dereg_final.columns
+```sos kernel="R"
+t1 <- feols(
+    tdso2_equip  ~  
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint +
+            lag_credit_supply_long_term * credit_constraint+
+            lag_hhi_branches * credit_constraint 
+           | fe_t_i + fe_c_t + fe_c_i,
+      df_final %>% inner_join(df_final %>%filter(tso2 > 0) %>% select(...1)) %>% mutate(tdso2_equip = tdso2_equip/output), 
+      #cluster = ~geocode4_corr + ind2#
+      vcov = 'iid'
+              )
+```
+
+```sos kernel="R"
+t2 <- feols(dwastewater_equip ~  
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint +
+            lag_credit_supply_long_term * credit_constraint +
+            lag_count_ccb * credit_constraint
+           | fe_t_i + fe_c_t + fe_c_i,
+      df_final %>% inner_join(df_final %>%filter(twaste_water > 0) %>% select(...1)) %>% mutate(tdso2_equip = tdso2_equip/output),
+      #cluster = ~geocode4_corr + ind2#
+      vcov = 'iid'
+              )
+```
+
+```sos kernel="R"
+t3 <- feols(dwastewater_equip ~  
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint +
+            lag_credit_supply_long_term * credit_constraint +
+            lag_hhi_branches * credit_constraint
+           | fe_t_i + fe_c_t + fe_c_i,
+      df_final %>% inner_join(df_final %>%filter(twaste_water > 0) %>% select(...1)) %>% mutate(dwastewater_equip = dwastewater_equip/output),
+      #cluster = ~geocode4_corr + ind2#
+      vcov = 'iid'
+              )
+t3
+```
+
+```sos kernel="R"
+t4 <- feols(tdwastegas_equip ~  
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint +
+            lag_credit_supply_long_term * credit_constraint +
+            lag_count_ccb * credit_constraint
+           | fe_t_i + fe_c_t + fe_c_i,
+      df_final %>% inner_join(df_final %>%filter(twaste_water > 0) %>% select(...1)) %>% mutate(dwastewater_equip = dwastewater_equip/output)
+      ,
+      #cluster = ~geocode4_corr + ind2#
+      vcov = 'iid'
+              )
+t4
+```
+
+```sos kernel="R"
+t5 <- feols(tdwastegas_equip ~  
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint +
+            lag_credit_supply_long_term * credit_constraint +
+            lag_hhi_branches * credit_constraint
+           | fe_t_i + fe_c_t + fe_c_i,
+      df_final %>% inner_join(df_final %>%filter(twaste_water > 0) %>% select(...1)) %>% mutate(tdwastegas_equip = tdwastegas_equip/output)
+      ,
+      #cluster = ~geocode4_corr + ind2#
+      vcov = 'iid'
+              )
+t5
+```
+
+<!-- #region kernel="R" -->
+Size
+<!-- #endregion -->
+
+```sos kernel="R"
+t0 <- feols(
+            tdso2_equip  ~  
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint +
+            lag_credit_supply_long_term * credit_constraint * log(total_asset) +
+            lag_count_ccb * credit_constraint  * log(total_asset)
+           | fe_t_i + fe_c_t + fe_c_i,
+      df_final %>% inner_join(df_final %>%filter(tso2 > 0) %>% select(...1)) %>% mutate(tdso2_equip = tdso2_equip/output), 
+      #cluster = ~geocode4_corr + ind2#
+      vcov = 'iid'
+              )
+summary(t0)
+```
+
+```sos kernel="R"
+t1 <- feols(
+    tdso2_equip  ~  
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint +
+            lag_credit_supply_long_term * credit_constraint * log(sales)+
+            lag_hhi_branches * credit_constraint * log(sales)
+           | fe_t_i + fe_c_t + fe_c_i,
+      df_final %>% inner_join(df_final %>%filter(tso2 > 0) %>% select(...1)) %>% mutate(tdso2_equip = tdso2_equip/output), 
+      #cluster = ~geocode4_corr + ind2#
+      vcov = 'iid'
+              )
+summary(t1)
+```
+
+```sos kernel="R"
+t2 <- feols(dwastewater_equip ~  
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint +
+            lag_credit_supply_long_term * credit_constraint * log(sales)+
+            lag_count_ccb * credit_constraint * log(sales)
+           | fe_t_i + fe_c_t + fe_c_i,
+      df_final %>% inner_join(df_final %>%filter(twaste_water > 0) %>% select(...1)) %>% mutate(dwastewater_equip = dwastewater_equip/output),
+      #cluster = ~geocode4_corr + ind2#
+      vcov = 'iid'
+              )
+summary(t2)
+```
+
+```sos kernel="R"
+t3 <- feols(dwastewater_equip ~  
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint +
+            lag_credit_supply_long_term * credit_constraint * log(sales)+
+            lag_hhi_branches * credit_constraint * log(sales)
+           | fe_t_i + fe_c_t + fe_c_i,
+      df_final %>% inner_join(df_final %>%filter(twaste_water > 0) %>% select(...1))  %>% mutate(dwastewater_equip = dwastewater_equip/output),
+      #cluster = ~geocode4_corr + ind2#
+      vcov = 'iid'
+              )
+summary(t3)
+```
+
+```sos kernel="R"
+t4 <- feols(tdwastegas_equip ~  
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint +
+            lag_credit_supply_long_term * credit_constraint * log(sales)+
+            lag_count_ccb * credit_constraint * log(sales)
+           | fe_t_i + fe_c_t + fe_c_i,
+      df_final %>% inner_join(df_final %>%filter(twaste_water > 0) %>% select(...1)) %>% mutate(tdwastegas_equip = tdwastegas_equip/output)
+      ,
+      #cluster = ~geocode4_corr + ind2#
+      vcov = 'iid'
+              )
+summary(t4)
+```
+
+```sos kernel="R"
+t5 <- feols(tdwastegas_equip ~  
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint +
+            lag_credit_supply_long_term * credit_constraint * log(sales)+
+            lag_hhi_branches * credit_constraint * log(sales)
+           | fe_t_i + fe_c_t + fe_c_i,
+      df_final %>% inner_join(df_final %>%filter(twaste_water > 0) %>% select(...1)) %>% mutate(tdwastegas_equip = tdwastegas_equip/output)
+      ,
+      #cluster = ~geocode4_corr + ind2#
+      vcov = 'iid'
+              )
+summary(t5)
+```
+
+<!-- #region kernel="R" -->
+### Technology upgrading
+
+ • 'total_industrialwater_used',
+ • 'total_freshwater_used',
+ • 'total_repeatedwater_used',
+ • 'total_coal_used',
+ • 'clean_gas_used'
+ • 'trlmxf',
+ • 'tylmxf'
+ • innovation_index
+<!-- #endregion -->
+
+<!-- #region kernel="R" -->
+Fresh water
+<!-- #endregion -->
+
+```sos kernel="R"
+t0 <- feols(log(total_freshwater_used_o) ~  
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint +
+            lag_credit_supply_long_term * credit_constraint +
+            lag_count_ccb * credit_constraint
+           | fe_t_i + fe_c_t + fe_c_i,
+      df_final %>% inner_join(df_final %>%filter(tcod > 40) %>% select(...1)) %>% 
+      mutate(total_freshwater_used_o = total_freshwater_used/sales) 
+      ,
+      cluster = ~geocode4_corr + ind2#
+      #vcov = 'iid'
+              )
+```
+
+```sos kernel="R"
+t1 <- feols(log(total_freshwater_used_o) ~  
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint +
+            lag_credit_supply_long_term * credit_constraint +
+            lag_hhi_branches * credit_constraint
+           | fe_t_i + fe_c_t + fe_c_i,
+      df_final %>% inner_join(df_final %>%filter(tcod > 40) %>% select(...1)) %>% 
+      mutate(total_freshwater_used_o = total_freshwater_used/sales) 
+      ,
+      cluster = ~geocode4_corr + ind2#
+      #vcov = 'iid'
+              )
+```
+
+```sos kernel="R"
+t2 <- feols(log(total_freshwater_used_o) ~  
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint +
+            lag_credit_supply_long_term * credit_constraint * log(total_asset)+
+            lag_count_ccb * credit_constraint * log(total_asset)
+           | fe_t_i + fe_c_t + fe_c_i,
+      df_final %>% inner_join(df_final %>%filter(tcod > 40) %>% select(...1)) %>% 
+      mutate(total_freshwater_used_o = total_freshwater_used/sales) 
+      ,
+      cluster = ~geocode4_corr + ind2#
+      #vcov = 'iid'
+              )
+summary(t2)
+```
+
+```sos kernel="R"
+t3 <- feols(log(total_freshwater_used_o) ~  
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint +
+            lag_credit_supply_long_term * credit_constraint * log(total_asset)+
+            lag_hhi_branches * credit_constraint * log(total_asset)
+           | fe_t_i + fe_c_t + fe_c_i,
+      df_final %>% inner_join(df_final %>%filter(tcod > 40) %>% select(...1)) %>% 
+      mutate(total_freshwater_used_o = total_freshwater_used/sales) 
+      ,
+      cluster = ~geocode4_corr + ind2#
+      #vcov = 'iid'
+              )
+summary(t3)
+```
+
+```sos kernel="R"
+etable(t0,t1, t2,t3, t4,t5,t6,t7,
+         #vcov = "iid",
+       #headers = c("1", "2", "3", "4", "5", "6", "7"),
+       tex = TRUE,
+       digits = 3,
+      digits.stats = 3
+      )
+```
+
+<!-- #region kernel="R" -->
+### Asset mixed
+<!-- #endregion -->
+
+```sos kernel="R"
+t0 <- feols(log(asset_tangibility_tot_asset) ~ 
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint +
+            lag_credit_supply_long_term * credit_constraint +
+            lag_count_ccb * credit_constraint
+           | fe_t_i + fe_c_t + fe_c_i,
+      df_final #%>% inner_join(df_final %>%filter(twaste_water > 0) %>% select(...1))
+      ,
+      #cluster = ~geocode4_corr + ind2#
+      vcov = 'iid'
+              )
+summary(t0)
+```
+
+```sos kernel="R"
+t1 <- feols(asset_tangibility_tot_asset ~ 
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint +
+            lag_credit_supply_long_term * credit_constraint +
+            lag_hhi_branches * credit_constraint
+           | fe_t_i + fe_c_t + fe_c_i,
+      df_final #%>% inner_join(df_final %>%filter(twaste_water > 0) %>% select(...1))
+      ,
+      #cluster = ~geocode4_corr + ind2#
+      vcov = 'iid'
+              )
+```
+
+```sos kernel="R"
+t2 <-feols(
+            log(asset_tangibility_tot_asset) ~ 
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint +
+            lag_credit_supply_long_term * credit_constraint * log(output)+
+            lag_count_ccb * credit_constraint * log(output)
+           | fe_t_i + fe_c_t + fe_c_i,
+            df_final #%>% inner_join(df_final %>%filter(twaste_water > 0) %>% select(...1))
+    ,
+      #cluster = ~geocode4_corr + ind2#
+      vcov = 'iid'
+              )
+summary(t3)
+```
+
+```sos kernel="R"
+t3 <- feols(
+            log(asset_tangibility_tot_asset) ~ 
+            log(output) + log(employment) + log(capital) + 
+            log(gdp_pop) * credit_constraint +
+            log(fdi_gdp) * credit_constraint +
+            lag_credit_supply_long_term * credit_constraint * log(output) +
+            lag_hhi_branches * credit_constraint * log(output)
+           | fe_t_i + fe_c_t + fe_c_i,
+            df_final #%>% inner_join(df_final %>%filter(tcod > 0) %>% select(...1))
+    ,
+      #cluster = ~geocode4_corr + ind2#
+      vcov = 'iid'
+              )
+summary(t2)
+```
+
+```sos kernel="R"
+etable(t0,t1, t2,t3,
+         #vcov = "iid",
+       #headers = c("1", "2", "3", "4", "5", "6", "7"),
+       tex = TRUE,
+       digits = 3,
+       digits.stats =3
+      )
 ```
 
 <!-- #region kernel="R" -->
